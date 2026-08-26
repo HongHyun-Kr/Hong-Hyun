@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raman Xc Mapper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f7f8fa;
+    --panel2:#ffffff;
+    --line:#dfe3e9;
+    --text:#1b2230;
+    --sub:#6b7484;
+    --accent:#0f9d68;
+    --accent2:#c97a12;
+    --danger:#e0323f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'Space Grotesk',sans-serif; -webkit-font-smoothing:antialiased;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  header{padding:24px 32px 18px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  header h1{margin:0; font-size:20px; font-weight:700; letter-spacing:0.5px;}
+  header h1 span{color:var(--accent);}
+  header p{margin:4px 0 0; color:var(--sub); font-size:13px;}
+  .layout{display:grid; grid-template-columns:320px 1fr; gap:0; min-height:calc(100vh - 78px);}
+  .sidebar{border-right:1px solid var(--line); padding:18px; overflow-y:auto; background:var(--panel);}
+  .group{margin-bottom:16px; border:1px solid var(--line); border-radius:10px; padding:12px; background:var(--panel2);}
+  .group h3{margin:0 0 10px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:600;}
+  .row{display:flex; gap:8px; margin-bottom:8px;}
+  .field{flex:1; min-width:0;}
+  .field label{display:block; font-size:10.5px; color:var(--sub); margin-bottom:3px;}
+  .field input, .field select{width:100%; background:#ffffff; border:1px solid var(--line); color:var(--text); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:'JetBrains Mono',monospace;}
+  .field input:focus, .field select:focus{outline:1px solid var(--accent); border-color:var(--accent);}
+  .formula{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--accent2); background:#ffffff; border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-top:6px;}
+  .filebtn{display:block; width:100%; text-align:center; padding:10px; border:1px dashed var(--line); border-radius:8px; color:var(--sub); font-size:12.5px; cursor:pointer; margin-bottom:10px;}
+  .filebtn:hover{border-color:var(--accent); color:var(--accent);}
+  input[type=file]{display:none;}
+  .runbtn{width:100%; padding:11px; border:none; border-radius:8px; background:var(--accent); color:#ffffff; font-weight:700; font-size:13px; cursor:pointer; letter-spacing:0.3px;}
+  .runbtn:disabled{background:#c7ccd3; color:#8a90999a; cursor:not-allowed;}
+  .runbtn:hover:not(:disabled){filter:brightness(1.08);}
+  .gobtn{width:100%; margin-top:4px; padding:7px; border:1px solid var(--accent); border-radius:7px;
+         background:#fff; color:var(--accent); font-weight:600; font-size:11.5px; cursor:pointer;
+         font-family:'Space Grotesk',sans-serif;}
+  .gobtn:hover{background:var(--accent); color:#fff;}
+  .gobtn:disabled{border-color:var(--line); color:#b0b6bf; cursor:not-allowed; background:#fff;}
+  .iconbtn{width:26px; height:26px; padding:0; display:inline-flex; align-items:center; justify-content:center;
+           font-size:14px; line-height:1; border:1px solid var(--line); background:#fff; color:var(--sub);
+           border-radius:6px; cursor:pointer;}
+  .iconbtn:hover{color:var(--accent); border-color:var(--accent);}
+  #grid-preview{display:grid; gap:2px; margin-top:10px;}
+  .cell{width:100%; aspect-ratio:1; border-radius:2px; background:#e9ecf1;}
+  .cell.ok{background:var(--accent);}
+  .cell.missing{background:var(--danger);}
+  #log{margin-top:12px; font-size:11px; color:var(--sub); max-height:120px; overflow-y:auto; border-top:1px solid var(--line); padding-top:8px; line-height:1.6;}
+  .log-err{color:var(--danger);}
+  .log-ok{color:var(--accent);}
+  #toast{position:fixed; right:26px; bottom:26px; z-index:999; width:170px; height:56px;}
+  .toast-item{
+    position:absolute; right:0; bottom:0; width:170px;
+    background:rgba(255,255,255,.9); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px);
+    border:1px solid var(--line); border-radius:11px;
+    padding:11px 15px; font-size:12.5px; font-weight:600; color:var(--text);
+    box-shadow:0 10px 26px rgba(0,0,0,.14);
+    border-left:3px solid var(--accent);
+    animation: toastIn .3s cubic-bezier(.34,1.56,.64,1) forwards, toastOut .45s ease-in 1.55s forwards;
+  }
+  @keyframes toastIn{from{opacity:0; transform:scale(.85) translateY(8px);} to{opacity:1; transform:scale(1) translateY(0);}}
+  @keyframes toastOut{to{opacity:0; transform:scale(.92) translateY(-8px);}}
+  .metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:6px;}
+  .metric{background:#fff; border:1px solid var(--line); border-radius:9px; padding:11px 13px;}
+  .metric .k{font-size:10px; color:var(--sub); text-transform:uppercase; letter-spacing:.7px;}
+  .metric .v{font-size:19px; font-weight:700; font-family:'JetBrains Mono',monospace; margin-top:3px;}
+  .metric .s{font-size:10.5px; color:var(--sub); margin-top:2px;}
+  .v-good{color:var(--accent);} .v-warn{color:var(--accent2);} .v-bad{color:var(--danger);}
+  .interp{background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:9px; padding:14px 16px; font-size:12.5px; line-height:1.85; margin-top:12px;}
+  .interp h5{margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--accent);}
+  .interp li{margin-bottom:7px;}
+  .interp ul{margin:0; padding-left:18px;}
+  .resultbullets{margin:8px 0 0; padding-left:16px; font-size:11px; color:var(--text); line-height:1.7;}
+  .resultbullets li{margin-bottom:2px;}
+  #zoneTable td{padding:3px 6px; font-family:'JetBrains Mono',monospace;}
+  #zoneTable .sw{width:10px; height:10px; border-radius:2px; display:inline-block;}
+  .twocol{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .dualslider{position:relative; height:26px;}
+  .dualslider-track{position:absolute; left:0; right:0; top:11px; height:5px; border-radius:3px; background:#ccc;}
+  .dualslider input[type=range]{
+    position:absolute; left:0; right:0; top:0; width:100%; margin:0; height:26px;
+    background:transparent; -webkit-appearance:none; appearance:none; pointer-events:none;
+  }
+  .dualslider input[type=range]::-webkit-slider-runnable-track{background:transparent;}
+  .dualslider input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; pointer-events:auto; width:16px; height:16px; border-radius:50%;
+    background:#fff; border:2.5px solid var(--text); margin-top:5px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.25);
+  }
+  .dualslider input[type=range]::-moz-range-thumb{
+    pointer-events:auto; width:14px; height:14px; border-radius:50%;
+    background:#fff; border:2.5px solid var(--text); cursor:pointer;
+  }
+  @media (max-width:1100px){ .twocol{grid-template-columns:1fr;} }
+  main{padding:18px 24px;}
+  .toolbar{display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .toolbar .spacer{flex:1;}
+  .btn{padding:7px 13px; border:1px solid var(--line); background:#ffffff; color:var(--sub); border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;}
+  .btn:hover{color:var(--accent); border-color:var(--accent);}
+  .btn.active{color:#fff; background:var(--accent); border-color:var(--accent);}
+  .maps-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px;}
+  .mapcard{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px;}
+  .mapcard .head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .mapcard .head h4{margin:0; font-size:12.5px; font-weight:600;}
+  .mapcard .head .mini{font-size:11px; padding:4px 8px;}
+  .mapplot{height:380px;}
+  .crosswrap{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px;}
+  .controlsline{display:flex; gap:14px; align-items:center; margin-bottom:12px; flex-wrap:wrap; font-size:12px; color:var(--sub);}
+  .controlsline label{font-weight:600; color:var(--text);}
+  .crossplot{height:380px;}
+  .empty{display:flex; align-items:center; justify-content:center; height:340px; color:var(--sub); font-size:13px; border:1px dashed var(--line); border-radius:10px;}
+  .badge{display:inline-block; padding:2px 8px; border-radius:999px; background:#ffffff; border:1px solid var(--line); font-size:10.5px; color:var(--sub); margin-left:8px;}
+  input[type=checkbox]{accent-color:var(--accent);}
+  @media (max-width:1100px){
+    .maps-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+    .sidebar{border-right:none; border-bottom:1px solid var(--line);}
+  }
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<header>
+  <div>
+    <h1>RAMAN <span>Xc</span> MAPPER</h1>
+    <p>a-Si / c-Si 피크 맵 + despike + 결정성 분율 Xc 매핑</p>
+  </div>
+  <div class="badge mono" id="statusBadge">파일 대기 중</div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+
+    <div class="group">
+      <h3>Scan Grid</h3>
+      <div class="row">
+        <div class="field"><label>nkx</label><input type="number" id="nkx" value="25"></div>
+        <div class="field"><label>nky</label><input type="number" id="nky" value="25"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>dx (µm)</label><input type="number" id="dx" value="2"></div>
+        <div class="field"><label>dy (µm)</label><input type="number" id="dy" value="2"></div>
+      </div>
+      <button class="gobtn go" disabled>GO</button>
+    </div>
+
+    <div class="group">
+      <h3>Spectral Bands</h3>
+      <div class="row">
+        <div class="field"><label>offset r0</label><input type="number" id="r0" value="260"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>a-Si min</label><input type="number" id="ramin" value="480"></div>
+        <div class="field"><label>a-Si max</label><input type="number" id="ramax" value="490"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>c-Si min</label><input type="number" id="rcmin" value="510"></div>
+        <div class="field"><label>c-Si max</label><input type="number" id="rcmax" value="530"></div>
+      </div>
+      <button class="gobtn go" disabled>GO</button>
+    </div>
+
+    <div class="group">
+      <h3>Despike (median filter)
+        <label style="float:right; font-weight:400; text-transform:none; letter-spacing:0; color:var(--sub); font-size:10.5px;">
+          <input type="checkbox" id="despikeOn" checked> 사용
+        </label>
+      </h3>
+      <div class="row">
+        <div class="field"><label>window</label><input type="number" id="dwin" value="3"></div>
+        <div class="field"><label>tau (σ)</label><input type="number" id="dtau" value="3.5" step="0.1"></div>
+        <div class="field"><label>max iter</label><input type="number" id="diter" value="2"></div>
+      </div>
+      <button class="gobtn go" disabled>GO</button>
+    </div>
+
+    <div class="group">
+      <h3>Crystalline Fraction</h3>
+      <div class="row">
+        <div class="field"><label>α (a-Si 보정계수)</label><input type="number" id="alpha" value="0.8" step="0.05"></div>
+      </div>
+      <div class="formula">Xc = Ic / (Ic + α·Ia)<br>Ia,Ic = 밴드 내 trapz 적분 면적</div>
+      <button class="gobtn go" disabled>GO</button>
+    </div>
+
+    <div class="group">
+      <h3>Files</h3>
+      <label class="filebtn" for="fileInput" id="filebtnLabel">.txt 스펙트럼 파일 선택 (여러 개)</label>
+      <input type="file" id="fileInput" multiple accept=".txt">
+      <div id="grid-preview"></div>
+      <div id="log"></div>
+    </div>
+
+    <button class="runbtn" id="runBtn" disabled>PROCESS</button>
+
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <button class="btn" id="colorModeBtn">색상 스케일: 개별 (a-Si / c-Si 각각 min-max)</button>
+      <select id="paletteSel" class="btn" style="padding:7px 10px;">
+        <option value="turbo">Turbo (기본)</option>
+        <option value="viridis">Viridis (차분)</option>
+        <option value="cividis">Cividis (색각 안전)</option>
+        <option value="slate">Slate (단색 블루)</option>
+        <option value="ember">Ember (단색 브라운)</option>
+        <option value="blues">Blues</option>
+        <option value="greys">Greys (흑백)</option>
+      </select>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--sub);">
+        <input type="checkbox" id="reverseScale"> 색상 반전
+      </label>
+      <span class="spacer"></span>
+      <button class="btn" id="saveAllBtn">전체 이미지 저장</button>
+    </div>
+
+    <div class="maps-grid" id="mapsGrid">
+      <div class="mapcard">
+        <div class="head"><h4>a-Si peak map</h4><button class="iconbtn" data-reset="plot-asi" title="축 원복">↻</button></div>
+        <div id="plot-asi" class="mapplot"></div>
+      </div>
+      <div class="mapcard">
+        <div class="head"><h4>c-Si peak map</h4><button class="iconbtn" data-reset="plot-csi" title="축 원복">↻</button></div>
+        <div id="plot-csi" class="mapplot"></div>
+      </div>
+      <div class="mapcard">
+        <div class="head"><h4 id="xcTitle">Xc map</h4><button class="iconbtn" data-reset="plot-xc" title="축 원복">↻</button></div>
+        <div id="plot-xc" class="mapplot"></div>
+      </div>
+    </div>
+
+    <div class="crosswrap">
+      <div class="controlsline">
+        <label>Cross-section</label>
+        <span style="display:flex; gap:9px; align-items:center; font-weight:400;">
+          <label style="display:flex; align-items:center; gap:4px;"><input type="checkbox" class="csTrace" value="a" checked> a-Si</label>
+          <label style="display:flex; align-items:center; gap:4px;"><input type="checkbox" class="csTrace" value="c" checked> c-Si</label>
+          <label style="display:flex; align-items:center; gap:4px;"><input type="checkbox" class="csTrace" value="xc"> Xc</label>
+        </span>
+        <select id="crossAxis">
+          <option value="x">X-cut (세로 프로파일)</option>
+          <option value="y">Y-cut (가로 프로파일)</option>
+        </select>
+        <span>위치 (µm)</span>
+        <input type="range" id="crossPos" min="0" max="100" value="30" step="1">
+        <span class="mono" id="crossPosVal">30 µm</span>
+        <label style="display:flex; align-items:center; gap:5px; font-weight:400;">
+          <input type="checkbox" id="showCutLine" checked> 맵에 절단선 표시
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; font-weight:400;">
+          <input type="checkbox" id="lockScale"> Y축 스케일 고정
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; font-weight:400;">
+          <input type="checkbox" id="showLegend" checked> 레전드 표시
+        </label>
+      </div>
+      <div id="plot-cross" class="crossplot"></div>
+    </div>
+
+
+    <div class="crosswrap" style="margin-top:18px;">
+      <div class="controlsline" style="margin-bottom:10px;">
+        <label style="font-size:13px;">공정 분석 (Process / Yield Analysis)</label>
+        <span class="spacer" style="flex:1;"></span>
+        <button class="btn" id="otsuBtn" title="φ 히스토그램에서 자연스러운 골짜기를 자동으로 찾아 φ 상/하한만 조정 (신호 임계는 통계적으로 불안정해 자동조정 대상에서 제외)">φ 자동(Otsu)</button>
+        <button class="runbtn" id="runProcBtn" style="width:auto; padding:9px 18px;">분석 실행</button>
+      </div>
+
+      <div style="max-width:520px; margin-bottom:14px; position:relative;">
+        <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--sub); margin-bottom:3px;">
+          <span>φ = Ic/(Ic+Ia) — 결정질 신호가 차지하는 비율</span>
+          <span class="mono"><span id="phiLoV">0.15</span> ~ <span id="phiHiV">0.50</span></span>
+        </div>
+        <div id="segLabTop" style="position:relative; height:15px; font-size:9px; font-weight:600; pointer-events:none;">
+          <span id="segLabB" style="position:absolute; transform:translateX(-50%); padding:1px 5px; border-radius:4px; color:#fff; white-space:nowrap;">Partial</span>
+        </div>
+        <div class="dualslider" id="phiSlider" style="margin-bottom:2px;">
+          <div class="dualslider-track" id="phiGrad"></div>
+          <input type="range" id="phiLo" min="0" max="100" value="15">
+          <input type="range" id="phiHi" min="0" max="100" value="50">
+        </div>
+        <div style="position:relative; height:14px; font-size:9px; font-weight:600; pointer-events:none;">
+          <span id="segLabA" style="position:absolute; transform:translateX(-50%); color:var(--sub);">Amorphous</span>
+          <span id="segLabC" style="position:absolute; transform:translateX(-50%); color:var(--sub);">Crystallized</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--sub); margin:12px 0 3px;">
+          <span>신호 임계 — 총신호(Ic+Ia)가 이 값보다 통계적으로 이상하게 낮으면 손실 처리 (수동 조정 권장)</span>
+          <span class="mono" id="sigFloorV">2%</span>
+        </div>
+        <input type="range" id="sigFloor" min="0" max="60" value="2" style="width:100%;">
+      </div>
+
+      <div class="controlsline" style="justify-content:space-between; gap:20px;">
+        <span>Xc 스펙 하한 <input type="number" id="specXc" value="0.5" step="0.05" min="0" max="1" style="width:62px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace;"></span>
+        <span>빔 반경 w <input type="number" id="beamW" value="45" step="1" style="width:62px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace;"> µm (1/e²)</span>
+        <span>피크 플루언스 F₀ <input type="number" id="beamF" value="390" step="10" style="width:70px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace;"> mJ/cm²</span>
+        <span>중심 기준
+          <select id="centerMode" style="padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+            <option value="centroid">Ic 강도중심</option>
+            <option value="grid">스캔 격자중심</option>
+          </select>
+        </span>
+      </div>
+
+      <div class="twocol" style="margin-top:10px;">
+        <div>
+          <div style="font-size:11.5px; color:var(--sub); margin-bottom:5px;">① Zone Classification</div>
+          <div id="plot-zone" style="height:360px;"></div>
+          <table id="zoneTable" style="width:100%; border-collapse:collapse; font-size:11px; margin-top:6px;"></table>
+          <ul class="resultbullets" id="res-zone"></ul>
+        </div>
+        <div>
+          <div style="font-size:11.5px; color:var(--sub); margin-bottom:5px;">② φ vs 총신호</div>
+          <div id="plot-scatter" style="height:360px;"></div>
+          <ul class="resultbullets" id="res-scatter"></ul>
+        </div>
+      </div>
+
+      <div class="twocol" style="margin-top:14px;">
+        <div>
+          <div style="font-size:11.5px; color:var(--sub); margin-bottom:5px;">③ Radial Profile</div>
+          <div id="plot-radial" style="height:340px;"></div>
+          <ul class="resultbullets" id="res-radial"></ul>
+        </div>
+        <div>
+          <div style="font-size:11.5px; color:var(--sub); margin-bottom:5px;">④ Gaussian Beam Fit</div>
+          <div id="plot-dose" style="height:340px;"></div>
+          <ul class="resultbullets" id="res-dose"></ul>
+        </div>
+      </div>
+
+      <div class="metrics" id="metricsBox" style="margin-top:16px;"></div>
+      <div class="interp" id="interpBox" style="display:none;"></div>
+    </div>
+
+    <div class="crosswrap" style="margin-top:18px;">
+      <div class="controlsline">
+        <label>α 민감도 분석</label>
+        <span style="font-weight:400;">α를 바꿔도 공간 순위는 불변 — 바뀌는 건 절대값과 대비뿐</span>
+        <span class="spacer" style="flex:1;"></span>
+        <button class="btn" id="runAlphaBtn">분석 실행</button>
+      </div>
+      <div id="plot-alpha" style="height:320px;"></div>
+      <div class="controlsline" style="margin-top:14px; border-top:1px solid var(--line); padding-top:14px;">
+        <label>외부 측정값으로 α 역산</label>
+        <span style="font-weight:400;">ellipsometer/XRD로 구한 이 시료의 평균 결정성</span>
+        <input type="number" id="extXc" value="70" step="1" style="width:80px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace;">
+        <span>%</span>
+        <button class="btn" id="solveAlphaBtn">α 역산</button>
+        <span class="mono" id="alphaResult" style="color:var(--accent2); font-weight:600;"></span>
+      </div>
+      <div id="alphaNote" style="font-size:11.5px; color:var(--sub); line-height:1.7; margin-top:10px;"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const PALETTES = {
+  turbo: [[0.0,'#30123b'],[0.1,'#4453c9'],[0.2,'#3e8ff3'],[0.3,'#1fc0dd'],
+          [0.4,'#20e4a8'],[0.5,'#82f560'],[0.6,'#c6ef34'],[0.7,'#fabf2c'],
+          [0.8,'#fb7d20'],[0.9,'#e2431a'],[1.0,'#7a0403']],
+  viridis: 'Viridis',
+  cividis: 'Cividis',
+  greys:   'Greys',
+  blues:   'Blues',
+  slate:   [[0.0,'#f2f4f7'],[0.25,'#b9c6d6'],[0.5,'#7d95b0'],[0.75,'#456185'],[1.0,'#16283f']],
+  ember:   [[0.0,'#faf6f0'],[0.25,'#e5c9a3'],[0.5,'#cf9457'],[0.75,'#a25c22'],[1.0,'#5c2b06']]
+};
+let paletteKey = 'turbo';
+let reverseScale = false;
+function currentScale(){
+  const p = PALETTES[paletteKey];
+  if(typeof p === 'string') return reverseScale ? p + '_r' : p;
+  return reverseScale ? p.map(([t,c],i,arr)=>[t, arr[arr.length-1-i][1]]) : p;
+}
+
+let uploaded = {};
+let N = 0, nkx = 25, nky = 25;
+let state = null;
+let colorMode = 'individual'; // 'individual' | 'common'
+
+function log(msg, cls){
+  const box = document.getElementById('toast');
+  // 스택 최대 3개까지만 유지 (같은 위치에 겹쳐 쌓이는 모션)
+  const items = box.querySelectorAll('.toast-item');
+  if(items.length>=3) items[0].remove();
+  const t = document.createElement('div');
+  t.className = 'toast-item';
+  t.style.zIndex = Date.now();
+  t.style.transform = `rotate(${(Math.random()*6-3).toFixed(1)}deg)`;
+  t.textContent = msg;
+  box.appendChild(t);
+  setTimeout(()=>t.remove(), 2000);
+}
+
+function linspace(a,b,n){
+  if(n<=1) return [a];
+  const out = new Array(n);
+  const step = (b-a)/(n-1);
+  for(let i=0;i<n;i++) out[i] = a + step*i;
+  return out;
+}
+
+function trapz(x,y){
+  let s=0;
+  for(let i=0;i<x.length-1;i++) s += (y[i]+y[i+1])/2*(x[i+1]-x[i]);
+  return Math.abs(s);
+}
+function bandMax(xArr,yArr,lo,hi){
+  let m = -Infinity, found=false;
+  for(let i=0;i<xArr.length;i++){ if(xArr[i]>=lo && xArr[i]<=hi){ found=true; if(yArr[i]>m) m=yArr[i]; } }
+  return found ? m : 0;
+}
+function bandTrapz(xArr,yArr,lo,hi){
+  const xs=[], ys=[];
+  for(let i=0;i<xArr.length;i++){ if(xArr[i]>=lo && xArr[i]<=hi){ xs.push(xArr[i]); ys.push(yArr[i]); } }
+  if(xs.length<2) return 0;
+  return trapz(xs,ys);
+}
+
+function medfilt2Symmetric(C, win){
+  const ny=C.length, nx=C[0].length, half=Math.floor(win/2);
+  const out = Array.from({length:ny},()=>new Array(nx).fill(0));
+  for(let i=0;i<ny;i++){
+    for(let j=0;j<nx;j++){
+      const vals=[];
+      for(let di=-half; di<=half; di++){
+        for(let dj=-half; dj<=half; dj++){
+          let ii=i+di, jj=j+dj;
+          if(ii<0) ii=-ii-1; if(ii>=ny) ii=2*ny-ii-1;
+          if(jj<0) jj=-jj-1; if(jj>=nx) jj=2*nx-jj-1;
+          ii=Math.min(Math.max(ii,0),ny-1); jj=Math.min(Math.max(jj,0),nx-1);
+          vals.push(C[ii][jj]);
+        }
+      }
+      vals.sort((a,b)=>a-b);
+      out[i][j]=vals[Math.floor(vals.length/2)];
+    }
+  }
+  return out;
+}
+function despikeMap(Cin, win, tau, maxIter){
+  let C = Cin.map(r=>r.slice());
+  const ny=C.length, nx=C[0].length;
+  for(let it=0; it<maxIter; it++){
+    const M = medfilt2Symmetric(C, win);
+    const R = C.map((row,i)=>row.map((v,j)=>v-M[i][j]));
+    const MAD = medfilt2Symmetric(R.map(row=>row.map(Math.abs)), win).map(row=>row.map(v=>v+Number.EPSILON));
+    const Sig = MAD.map(row=>row.map(v=>1.4826*v));
+    let any=false;
+    for(let i=0;i<ny;i++) for(let j=0;j<nx;j++){
+      if(Math.abs(R[i][j]) > tau*Sig[i][j]){ C[i][j]=M[i][j]; any=true; }
+    }
+    if(!any) break;
+  }
+  return C;
+}
+
+// ---------- File handling ----------
+document.getElementById('fileInput').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files);
+  document.getElementById('log').innerHTML='';
+  uploaded = {};
+  document.getElementById('filebtnLabel').textContent = files.length + '개 파일 로드됨';
+  log(`${files.length}개 파일 파싱 중...`);
+  for(const f of files){
+    const m = f.name.match(/(\d+)(?=\.\w+$)/);
+    if(!m){ log(`⚠ 파일명에서 번호를 찾지 못함: ${f.name}`, 'log-err'); continue; }
+    const idx = parseInt(m[1],10);
+    const text = await f.text();
+    const lines = text.split(/\r?\n/);
+    const x=[], y=[];
+    for(const ln of lines){
+      const parts = ln.trim().split(/[\s,\t]+/);
+      if(parts.length<2) continue;
+      const a=parseFloat(parts[0]), b=parseFloat(parts[1]);
+      if(!isNaN(a) && !isNaN(b)){ x.push(a); y.push(b); }
+    }
+    if(x.length===0){ log(`⚠ 숫자 데이터 없음: ${f.name}`, 'log-err'); continue; }
+    uploaded[idx] = {x,y,name:f.name};
+  }
+  log(`${Object.keys(uploaded).length}개 파일 매칭 완료`, 'log-ok');
+  refreshGridPreview();
+});
+
+function refreshGridPreview(){
+  nkx = parseInt(document.getElementById('nkx').value,10);
+  nky = parseInt(document.getElementById('nky').value,10);
+  N = nkx*nky;
+  const grid = document.getElementById('grid-preview');
+  grid.style.gridTemplateColumns = `repeat(${nkx}, 1fr)`;
+  grid.innerHTML='';
+  let missing=0;
+  for(let idx=1; idx<=N; idx++){
+    const c = document.createElement('div');
+    c.className = 'cell ' + (uploaded[idx] ? 'ok' : 'missing');
+    c.title = `#${idx}` + (uploaded[idx] ? ` — ${uploaded[idx].name}` : ' — 누락');
+    if(!uploaded[idx]) missing++;
+    grid.appendChild(c);
+  }
+  const dis = (missing>0 || N===0);
+  document.getElementById('runBtn').disabled = dis;
+  document.querySelectorAll('.gobtn.go').forEach(b=>b.disabled = dis);
+  document.getElementById('statusBadge').textContent = missing>0 ? `${missing}개 파일 누락 (총 ${N})` : `${N}개 파일 준비 완료`;
+  if(missing>0) log(`⚠ ${missing}개 파일이 grid(${nkx}×${nky}=${N})에 대해 누락됨`, 'log-err');
+}
+['nkx','nky'].forEach(id=>document.getElementById(id).addEventListener('input', refreshGridPreview));
+
+// ---------- Processing pipeline ----------
+document.querySelectorAll('.gobtn.go').forEach(b=>b.addEventListener('click', ()=>document.getElementById('runBtn').click()));
+
+document.getElementById('runBtn').addEventListener('click', ()=>{
+  const dx=+document.getElementById('dx').value, dy=+document.getElementById('dy').value;
+  const r0=+document.getElementById('r0').value;
+  const ramin=+document.getElementById('ramin').value, ramax=+document.getElementById('ramax').value;
+  const rcmin=+document.getElementById('rcmin').value, rcmax=+document.getElementById('rcmax').value;
+  const dwin=+document.getElementById('dwin').value, dtau=+document.getElementById('dtau').value, diter=+document.getElementById('diter').value;
+  const alpha=+document.getElementById('alpha').value;
+
+  const Lx=dx*nkx, Ly=dy*nky;
+  const nx = linspace(0,Lx,nkx), ny = linspace(0,Ly,nky);
+
+  const data_a = Array.from({length:nky},()=>new Array(nkx).fill(0));
+  const data_c = Array.from({length:nky},()=>new Array(nkx).fill(0));
+  const ia_map = Array.from({length:nky},()=>new Array(nkx).fill(0));
+  const ic_map = Array.from({length:nky},()=>new Array(nkx).fill(0));
+  const idxGrid = Array.from({length:nky},()=>new Array(nkx).fill(0));
+
+  // 실측 이미지가 raster 순번(1=좌상단...N=우하단) 대비 점대칭(좌우+상하 반전)으로 확인됨
+  // → kfile = N - rasterIndex + 1 로 전 맵에 동일하게 보정 (a-Si/c-Si/Xc 모두 동일 변환만 적용, 추가 회전 없음)
+  for(let kyi=1; kyi<=nky; kyi++){
+    for(let kxi=1; kxi<=nkx; kxi++){
+      const rasterIndex = (kyi-1)*nkx + kxi;
+      const kfile = N - rasterIndex + 1;
+      const raw = uploaded[kfile];
+      const spec = raw.y.map(v=>v-r0);
+      data_a[kyi-1][kxi-1] = bandMax(raw.x, spec, ramin, ramax);
+      data_c[kyi-1][kxi-1] = bandMax(raw.x, spec, rcmin, rcmax);
+      ia_map[kyi-1][kxi-1] = bandTrapz(raw.x, spec, ramin, ramax);
+      ic_map[kyi-1][kxi-1] = bandTrapz(raw.x, spec, rcmin, rcmax);
+      idxGrid[kyi-1][kxi-1] = kfile;
+    }
+  }
+
+  const useDespike = document.getElementById('despikeOn').checked;
+  const DS = (M)=> useDespike ? despikeMap(M, dwin, dtau, diter) : M;
+  const data_a_d = DS(data_a), data_c_d = DS(data_c);
+  const ia_d = DS(ia_map), ic_d = DS(ic_map);
+
+  let Xc = ic_d.map((row,i)=>row.map((v,j)=> v/(v+alpha*ia_d[i][j]+Number.EPSILON) ));
+  Xc = DS(Xc);
+  Xc = Xc.map(row=>row.map(v=>Math.min(Math.max(v,0),1)));
+
+  state = {nx, ny, data_a:data_a_d, data_c:data_c_d, Xc, idxGrid, alpha, ia:ia_d, ic:ic_d};
+
+  log('완료! ✓');
+  document.getElementById('statusBadge').textContent = '처리 완료';
+  document.getElementById('xcTitle').textContent = `Xc map (α=${alpha.toFixed(2)})`;
+
+  renderMaps();
+  buildCrossSection();
+});
+
+function autoMax(M){ let m=0; M.forEach(r=>r.forEach(v=>{ if(v>m) m=v; })); return m || 1; }
+
+function renderMaps(){
+  let aMax = autoMax(state.data_a), cMax = autoMax(state.data_c);
+  if(colorMode==='common'){ const common = Math.max(aMax,cMax); aMax = common; cMax = common; }
+  plotHeatmap('plot-asi', state.nx, state.ny, state.data_a, state.idxGrid, 0, aMax);
+  plotHeatmap('plot-csi', state.nx, state.ny, state.data_c, state.idxGrid, 0, cMax);
+  plotHeatmap('plot-xc', state.nx, state.ny, state.Xc, state.idxGrid, 0, 1);
+}
+
+document.getElementById('paletteSel').addEventListener('change', (e)=>{
+  paletteKey = e.target.value;
+  if(state) renderMaps();
+});
+document.getElementById('reverseScale').addEventListener('change', (e)=>{
+  reverseScale = e.target.checked;
+  if(state) renderMaps();
+});
+
+document.getElementById('colorModeBtn').addEventListener('click', ()=>{
+  colorMode = colorMode==='individual' ? 'common' : 'individual';
+  document.getElementById('colorModeBtn').textContent = colorMode==='individual'
+    ? '색상 스케일: 개별 (a-Si / c-Si 각각 min-max)'
+    : '색상 스케일: 공통 (a-Si / c-Si 동일 범위)';
+  document.getElementById('colorModeBtn').classList.toggle('active', colorMode==='common');
+  if(state) renderMaps();
+});
+
+function plotHeatmap(divId, xArr, yArr, Z, idxGrid, zmin, zmax){
+  const trace = {
+    z: Z, x: xArr, y: yArr, type:'heatmap',
+    colorscale: currentScale(), zmin, zmax,
+    customdata: idxGrid,
+    hovertemplate: 'x: %{x:.1f} µm<br>y: %{y:.1f} µm<br>#%{customdata}<extra></extra>',
+    colorbar:{tickfont:{color:'#6b7484', family:'JetBrains Mono'}}
+  };
+  const layout = {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:11},
+    xaxis:{title:'X (µm)', gridcolor:'#e5e8ee', dtick:10, tick0:0},
+    yaxis:{title:'Y (µm)', gridcolor:'#e5e8ee', scaleanchor:'x', autorange:'reversed', dtick:10, tick0:0},
+    margin:{t:10,l:50,r:10,b:40},
+    shapes:[]
+  };
+  Plotly.newPlot(divId, [trace], layout, {displaylogo:false, responsive:true, scrollZoom:true});
+}
+
+document.querySelectorAll('[data-reset]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const id = btn.dataset.reset;
+    Plotly.relayout(id, {'xaxis.autorange':true, 'yaxis.autorange':true});
+  });
+});
+
+// ---------- Cross-section ----------
+function buildCrossSection(){
+  const Lx = state.nx[state.nx.length-1], Ly = state.ny[state.ny.length-1];
+  const axis = document.getElementById('crossAxis').value;
+  const slider = document.getElementById('crossPos');
+  slider.max = axis==='x' ? Lx : Ly;
+  slider.value = Math.round((axis==='x'?Lx:Ly)/2);
+  drawCrossSection();
+}
+document.getElementById('crossAxis').addEventListener('change', buildCrossSection);
+document.querySelectorAll('.csTrace').forEach(c=>c.addEventListener('change', drawCrossSection));
+document.getElementById('showLegend').addEventListener('change', drawCrossSection);
+document.getElementById('crossPos').addEventListener('input', drawCrossSection);
+document.getElementById('showCutLine').addEventListener('change', drawCrossSection);
+let lockedRange = null;
+document.getElementById('lockScale').addEventListener('change', (e)=>{
+  if(e.target.checked && state){
+    const picked = Array.from(document.querySelectorAll('.csTrace:checked')).map(c=>c.value).filter(k=>k!=='xc');
+    const Ms = picked.map(k=> k==='a'?state.data_a:state.data_c);
+    if(!Ms.length) Ms.push(state.data_c);
+    let lo=Infinity, hi=-Infinity;
+    Ms.forEach(M=>M.forEach(r=>r.forEach(v=>{ if(v<lo)lo=v; if(v>hi)hi=v; })));
+    const pad=(hi-lo)*0.05;
+    lockedRange=[lo-pad, hi+pad];
+    log('스케일 고정');
+  } else {
+    lockedRange=null;
+    log('스케일 자동');
+  }
+  drawCrossSection();
+});
+
+function nearestIdx(arr, v){
+  let bi=0, bd=Infinity;
+  arr.forEach((a,i)=>{ const d=Math.abs(a-v); if(d<bd){bd=d;bi=i;} });
+  return bi;
+}
+
+const mapDivFor = {a:'plot-asi', c:'plot-csi', xc:'plot-xc'};
+
+function clearCutLines(){
+  Object.values(mapDivFor).forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.layout) Plotly.relayout(id, {shapes:[]});
+  });
+}
+
+function drawCrossSection(){
+  if(!state) return;
+  const axis = document.getElementById('crossAxis').value;
+  const pos = +document.getElementById('crossPos').value;
+  const showLine = document.getElementById('showCutLine').checked;
+  const showLeg = document.getElementById('showLegend').checked;
+  document.getElementById('crossPosVal').textContent = pos + ' µm';
+
+  const picked = Array.from(document.querySelectorAll('.csTrace:checked')).map(c=>c.value);
+  const SRC = {a:{M:state.data_a, name:'a-Si', color:'#4b6bb5', axis:'y'},
+               c:{M:state.data_c, name:'c-Si', color:'#0f9d68', axis:'y'},
+               xc:{M:state.Xc,    name:'Xc',   color:'#c97a12', axis:'y2'}};
+
+  let xline, xlabel;
+  if(axis==='x'){ xline = state.ny; xlabel='Y (µm)'; }
+  else          { xline = state.nx; xlabel='X (µm)'; }
+
+  const traces = picked.map(k=>{
+    const M = SRC[k].M;
+    let yline;
+    if(axis==='x'){ const kxIdx=nearestIdx(state.nx,pos); yline=state.ny.map((_,i)=>M[i][kxIdx]); }
+    else          { const kyIdx=nearestIdx(state.ny,pos); yline=state.nx.map((_,j)=>M[kyIdx][j]); }
+    return {x:xline, y:yline, mode:'lines+markers', name:SRC[k].name, yaxis:SRC[k].axis,
+            line:{color:SRC[k].color, width:2.2}, marker:{size:4}};
+  });
+
+  const hasXc = picked.includes('xc');
+  Plotly.newPlot('plot-cross', traces, {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:11},
+    xaxis:{title:xlabel, gridcolor:'#e5e8ee', dtick:10, tick0:0},
+    yaxis:{title:'Intensity (a.u.)', gridcolor:'#e5e8ee',
+           range: lockedRange || undefined, autorange: lockedRange ? false : true},
+    yaxis2:{title:'Xc', overlaying:'y', side:'right', range:[0,1], showgrid:false,
+            visible:hasXc, titlefont:{color:'#c97a12'}, tickfont:{color:'#c97a12'}},
+    showlegend: showLeg,
+    legend:{font:{size:10}, orientation:'h', y:-0.22},
+    margin:{t:10,l:55,r:hasXc?55:20,b: showLeg?58:40}
+  }, {displaylogo:false, responsive:true, scrollZoom:true});
+
+  clearCutLines();
+  if(showLine){
+    const Lx = state.nx[state.nx.length-1], Ly = state.ny[state.ny.length-1];
+    const shape = axis==='x'
+      ? {type:'line', x0:pos, x1:pos, y0:0, y1:Ly, line:{color:'#e0323f', width:2, dash:'dash'}}
+      : {type:'line', x0:0, x1:Lx, y0:pos, y1:pos, line:{color:'#e0323f', width:2, dash:'dash'}};
+    // 선택된 모든 맵에 절단선 표시
+    const divs = {a:'plot-asi', c:'plot-csi', xc:'plot-xc'};
+    picked.forEach(k=> Plotly.relayout(divs[k], {shapes:[shape]}) );
+  }
+}
+
+document.querySelectorAll('.csTrace').forEach(c=>c.addEventListener('change', drawCrossSection));
+document.getElementById('showLegend').addEventListener('change', drawCrossSection);
+
+// ================= PROCESS / YIELD ANALYSIS =================
+const ZONE_C = {crys:'#0f9d68', part:'#c97a12', amor:'#4b6bb5'};
+function updatePhiGradient(){
+  const lo=+document.getElementById('phiLo').value, hi=+document.getElementById('phiHi').value;
+  document.getElementById('phiGrad').style.background =
+    `linear-gradient(90deg, ${ZONE_C.amor} 0%, ${ZONE_C.amor} ${lo}%, ${ZONE_C.part} ${lo}%, ${ZONE_C.part} ${hi}%, ${ZONE_C.crys} ${hi}%, ${ZONE_C.crys} 100%)`;
+  const segA=document.getElementById('segLabA'), segB=document.getElementById('segLabB'), segC=document.getElementById('segLabC');
+  segA.style.left = Math.max(6,lo/2)+'%';
+  segC.style.left = Math.min(94,(hi+100)/2)+'%';
+  segB.style.left = Math.min(94,Math.max(6,(lo+hi)/2))+'%';
+  segB.style.background = ZONE_C.part;
+}
+function syncPhiHandles(changed){
+  const loEl=document.getElementById('phiLo'), hiEl=document.getElementById('phiHi');
+  let lo=+loEl.value, hi=+hiEl.value;
+  if(lo>hi){ if(changed==='phiLo') hiEl.value=lo; else loEl.value=hi; lo=+loEl.value; hi=+hiEl.value; }
+  document.getElementById('phiLoV').textContent=(lo/100).toFixed(2);
+  document.getElementById('phiHiV').textContent=(hi/100).toFixed(2);
+  updatePhiGradient();
+}
+['phiLo','phiHi'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    syncPhiHandles(id);
+    if(state) runProcess(true);
+  });
+});
+document.getElementById('sigFloor').addEventListener('input', e=>{
+  document.getElementById('sigFloorV').textContent = e.target.value+'%';
+  if(state) runProcess(true);
+});
+document.getElementById('centerMode').addEventListener('change', ()=>{ if(state) runProcess(true); });
+updatePhiGradient();
+
+
+const ZONE_NAMES = ['Crystallized','Partial','Amorphous','Signal Loss'];
+const ZONE_COLORS = ['#0f9d68','#c97a12','#4b6bb5','#b0334a'];
+
+function flat(M){ const o=[]; M.forEach(r=>r.forEach(v=>o.push(v))); return o; }
+function pearson(x,y){
+  const n=x.length, mx=x.reduce((a,b)=>a+b,0)/n, my=y.reduce((a,b)=>a+b,0)/n;
+  let sxy=0,sxx=0,syy=0;
+  for(let i=0;i<n;i++){ const a=x[i]-mx,b=y[i]-my; sxy+=a*b; sxx+=a*a; syy+=b*b; }
+  return sxy/Math.sqrt(sxx*syy+Number.EPSILON);
+}
+function stats(arr){
+  const n=arr.length, m=arr.reduce((a,b)=>a+b,0)/n;
+  const sd=Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/n);
+  return {mean:m, sd:sd, cv: sd/(m+Number.EPSILON)*100};
+}
+function percentileOf(sortedArr, v){
+  let lo=0, hi=sortedArr.length;
+  while(lo<hi){ const mid=(lo+hi)>>1; if(sortedArr[mid]<v) lo=mid+1; else hi=mid; }
+  return lo/sortedArr.length*100;
+}
+
+document.getElementById('runProcBtn').addEventListener('click', ()=>runProcess(false));
+
+function runProcess(silent){
+  if(!state){ log('먼저 PROCESS를 실행하세요','log-err'); return; }
+  const ny=state.ny.length, nx=state.nx.length;
+  const IC=state.ic, IA=state.ia, XC=state.Xc;
+  const fc=flat(IC), fa=flat(IA);
+
+  // phi = Ic/(Ic+Ia) : α와 무관한 순수 면적비. 신호 세기는 total = Ic+Ia 로 별도 판단.
+  const PHI = IC.map((row,i)=>row.map((v,j)=> v/(v+IA[i][j]+Number.EPSILON) ));
+  const TOT = IC.map((row,i)=>row.map((v,j)=> v+IA[i][j] ));
+  const fphi = flat(PHI), ftotRaw = flat(TOT), ftot = ftotRaw.slice().sort((a,b)=>a-b);
+
+  const phiLo = +document.getElementById('phiLo').value/100;
+  const phiHi = +document.getElementById('phiHi').value/100;
+  const sigPct = +document.getElementById('sigFloor').value/100;
+  const totFloor = ftot[Math.floor(ftot.length*sigPct)];
+  const spec=+document.getElementById('specXc').value;
+  const w=+document.getElementById('beamW').value, F0=+document.getElementById('beamF').value;
+
+  // --- ① zone classification: 먼저 신호 세기로 저신호 여부 판정, 그 다음에만 phi로 상 분류 ---
+  const zone = Array.from({length:ny},()=>new Array(nx).fill(0));
+  const counts=[0,0,0,0];
+  for(let i=0;i<ny;i++) for(let j=0;j<nx;j++){
+    let z;
+    if(TOT[i][j] < totFloor) z=3;             // 신호 손실 (총신호 자체가 하위 X%)
+    else if(PHI[i][j] >= phiHi) z=0;           // 결정화
+    else if(PHI[i][j] >= phiLo) z=1;           // 부분 결정화
+    else z=2;                                  // 비정질
+    zone[i][j]=z; counts[z]++;
+  }
+  const tot=nx*ny;
+  const frac=counts.map(c=>c/tot*100);
+
+  Plotly.newPlot('plot-zone', [{
+    z:zone, x:state.nx, y:state.ny, type:'heatmap',
+    colorscale:[[0,ZONE_COLORS[0]],[0.249,ZONE_COLORS[0]],[0.25,ZONE_COLORS[1]],[0.499,ZONE_COLORS[1]],
+                [0.5,ZONE_COLORS[2]],[0.749,ZONE_COLORS[2]],[0.75,ZONE_COLORS[3]],[1,ZONE_COLORS[3]]],
+    zmin:0, zmax:3, showscale:false,
+    customdata:state.idxGrid.map((row,i)=>row.map((v,j)=>[v, PHI[i][j], TOT[i][j]])),
+    text:zone.map(r=>r.map(v=>ZONE_NAMES[v])),
+    hovertemplate:'x: %{x:.1f} µm<br>y: %{y:.1f} µm<br>#%{customdata[0]}<br>φ=Ic/(Ic+Ia) = %{customdata[1]:.3f}<br>total = %{customdata[2]:.0f}<br>%{text}<extra></extra>'
+  }], {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:10},
+    xaxis:{title:'X (µm)', gridcolor:'#e5e8ee', dtick:10, tick0:0},
+    yaxis:{title:'Y (µm)', gridcolor:'#e5e8ee', scaleanchor:'x', autorange:'reversed', dtick:10, tick0:0},
+    margin:{t:8,l:48,r:8,b:38}
+  }, {displaylogo:false, responsive:true, scrollZoom:true});
+
+  document.getElementById('zoneTable').innerHTML = ZONE_NAMES.map((n,k)=>
+    `<tr><td><span class="sw" style="background:${ZONE_COLORS[k]}"></span></td><td>${n}</td><td style="text-align:right;">${frac[k].toFixed(1)}%</td></tr>`
+  ).join('');
+
+  const zoneBullets = [`Crystallized ${frac[0].toFixed(1)}%, Partial ${frac[1].toFixed(1)}%, Amorphous ${frac[2].toFixed(1)}%, Signal Loss ${frac[3].toFixed(1)}%`];
+  if(frac[3]>3) zoneBullets.push(`Signal Loss가 ${frac[3].toFixed(1)}%로 큼 — ②번 산점도에서 원점 근처 별도 덩어리인지 확인 필요`);
+  else zoneBullets.push(`Signal Loss ${frac[3].toFixed(1)}% — 정상 범위`);
+  if(frac[1]>10) zoneBullets.push(`Partial 영역이 ${frac[1].toFixed(1)}%로 넓음 — 경계에서 부분 용융 구간이 큼`);
+  document.getElementById('res-zone').innerHTML = zoneBullets.map(b=>`<li>${b}</li>`).join('');
+
+  // --- 중심점: Ic 강도중심(기본) 또는 스캔 격자 기하 중심 ---
+  const centerMode = document.getElementById('centerMode').value;
+  let cx, cy;
+  if(centerMode==='grid'){
+    cx = state.nx[state.nx.length-1]/2; cy = state.ny[state.ny.length-1]/2;
+  } else {
+    let sw=0; cx=0; cy=0;
+    for(let i=0;i<ny;i++) for(let j=0;j<nx;j++){ const v=Math.max(IC[i][j],0); sw+=v; cx+=v*state.nx[j]; cy+=v*state.ny[i]; }
+    cx/=sw; cy/=sw;
+  }
+  const R = Array.from({length:ny},(_,i)=>state.nx.map((X,j)=>Math.hypot(X-cx, state.ny[i]-cy)));
+  const fr=flat(R);
+
+  // --- ② φ vs 총신호 산점도 ---
+  // ①의 판정 로직이 쓰는 축(φ, 총신호)을 그대로 플롯 축으로 사용 → 경계선이 세로/가로 직선이 되어
+  // Ic-Ia 평면에 그릴 때 필요했던 기울기 변환((1-φ)/φ)이 아예 필요 없어짐
+  const r = pearson(fc, fa);
+  const fzone = flat(zone);
+  const totMax = Math.max(...ftotRaw)*1.05;
+  const scatterAnnot = [{xref:'paper',yref:'paper',x:0.97,y:0.97,xanchor:'right',
+                  text:`Pearson r(Ic,Ia) = ${r.toFixed(3)}`, showarrow:false,
+                  font:{size:11,color:'#1b2230',family:'JetBrains Mono'},
+                  bgcolor:'rgba(255,255,255,.85)', borderpad:3}];
+
+  const ptColors = fzone.map(z=>ZONE_COLORS[z]);
+  const lineLo = {type:'line', x0:phiLo, x1:phiLo, y0:0, y1:totMax, line:{color:ZONE_C.amor,width:1.5,dash:'dash'}};
+  const lineHi = {type:'line', x0:phiHi, x1:phiHi, y0:0, y1:totMax, line:{color:ZONE_C.crys,width:1.5,dash:'dash'}};
+  const lineSig = {type:'line', x0:0, x1:1, y0:totFloor, y1:totFloor, line:{color:ZONE_COLORS[3],width:1.5,dash:'dot'}};
+  const scatterShapes = [lineLo,lineHi,lineSig];
+  const scatterTrace = {x:fphi, y:ftotRaw, mode:'markers', type:'scattergl', marker:{size:5, color:ptColors},
+    customdata: flat(state.idxGrid).map((v,i)=>[v, fc[i], fa[i]]),
+    hovertemplate:'φ=%{x:.3f}<br>총신호=%{y:.0f}<br>Ic %{customdata[1]:.0f} / Ia %{customdata[2]:.0f}<br>#%{customdata[0]}<extra></extra>'};
+
+  Plotly.newPlot('plot-scatter', [scatterTrace], {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:10},
+    xaxis:{title:'φ = Ic/(Ic+Ia)', gridcolor:'#e5e8ee', range:[0,1]},
+    yaxis:{title:'총신호 = Ic+Ia (a.u.)', gridcolor:'#e5e8ee', range:[0,totMax]},
+    shapes:scatterShapes,
+    annotations:scatterAnnot,
+    margin:{t:8,l:58,r:8,b:42}
+  }, {displaylogo:false, responsive:true});
+
+  const scatterBullets = [`Pearson r(Ic,Ia) = ${r.toFixed(3)} — Ic·Ia 원본값의 상관 (φ와는 별개 지표)`];
+  scatterBullets.push(r<-0.5 ? 'Ia·Ic 강한 음의 상관 — 순수 상변화(a→c)로 설명 가능'
+    : r<-0.2 ? 'Ia·Ic 중간 수준 상관 — 상변화 외 요인 혼재 가능'
+    : 'Ia·Ic 상관 약함 — 단순 상변화로 설명 안 됨, 신호 손실 의심');
+  scatterBullets.push('세로선 = φ 상/하한, 가로선 = 신호 임계 (①과 동일한 경계, 축만 바꿔 그림)');
+  document.getElementById('res-scatter').innerHTML = scatterBullets.map(b=>`<li>${b}</li>`).join('');
+
+  // --- ③ radial binning ---
+  // 빈 폭은 실제 측정 간격(dx,dy)에 맞춤 — 이보다 넓으면 공간 해상도를 낭비하고, 좁으면 빈당 점 수가 부족해짐
+  const rMax=Math.max(...fr);
+  const spacingX = (state.nx.length>1 ? state.nx[1]-state.nx[0] : 1);
+  const spacingY = (state.ny.length>1 ? state.ny[1]-state.ny[0] : 1);
+  const spacing = Math.min(spacingX, spacingY); // dx≠dy인 경우 더 촘촘한 축 기준
+  const bw = Math.max(spacing, rMax/40); // 과도하게 잘게 쪼개져 통계가 흔들리는 것도 방지
+  const NB = Math.max(4, Math.ceil(rMax/bw));
+  const bins=Array.from({length:NB},()=>({r:[],xc:[],ic:[],ia:[]}));
+  for(let i=0;i<ny;i++) for(let j=0;j<nx;j++){
+    let b=Math.min(Math.floor(R[i][j]/bw), NB-1);
+    bins[b].r.push(R[i][j]); bins[b].xc.push(XC[i][j]); bins[b].ic.push(IC[i][j]); bins[b].ia.push(IA[i][j]);
+  }
+  const rb=[],xcb=[],icb=[],iab=[],xcsd=[];
+  bins.forEach(b=>{ if(b.r.length){
+    rb.push(b.r.reduce((x,y)=>x+y,0)/b.r.length);
+    const st=stats(b.xc); xcb.push(st.mean); xcsd.push(st.sd);
+    icb.push(b.ic.reduce((x,y)=>x+y,0)/b.ic.length);
+    iab.push(b.ia.reduce((x,y)=>x+y,0)/b.ia.length);
+  }});
+  // Ic·Ia 각각을 "이 맵에서 관측된 자기 최댓값" 대비 0~1로 정규화 (서로 다른 밴드라 절대 단위 비교 불가하므로 모양만 비교)
+  const icN=icb.map(v=>v/Math.max(...icb)), iaN=iab.map(v=>v/Math.max(...iab));
+
+  // 교차점: Ic(정규화)와 Ia(정규화) 곡선이 서로 같아지는 반경 (둘 다 부호가 바뀌는 지점)
+  let rCross=null;
+  for(let k=0;k<rb.length-1;k++){
+    const d0=icN[k]-iaN[k], d1=icN[k+1]-iaN[k+1];
+    if(d0>=0 && d1<0){ const f=d0/(d0-d1); rCross=rb[k]+f*(rb[k+1]-rb[k]); break; }
+  }
+
+  Plotly.newPlot('plot-radial', [
+    {x:rb,y:icN,mode:'lines+markers',name:'Ic (자기 최댓값 대비 정규화)',line:{color:'#0f9d68',width:2.2}},
+    {x:rb,y:iaN,mode:'lines+markers',name:'Ia (자기 최댓값 대비 정규화)',line:{color:'#4b6bb5',width:2.2}},
+    {x:rb,y:xcb,mode:'lines+markers',name:'Xc (0~1, 별도 계산값)',line:{color:'#c97a12',width:2.2,dash:'dot'}}
+  ], {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:10},
+    xaxis:{title:'중심으로부터 거리 r (µm)', gridcolor:'#e5e8ee'},
+    yaxis:{title:'정규화 값 / Xc', range:[0,1.05], gridcolor:'#e5e8ee'},
+    legend:{font:{size:9.5}, orientation:'h', y:-0.28},
+    shapes: rCross!==null ? [{type:'line', x0:rCross, x1:rCross, y0:0, y1:1.05, line:{color:'#e0323f',width:1.5,dash:'dash'}}] : [],
+    annotations: rCross!==null ? [{x:rCross, y:1.05, text:`r = ${rCross.toFixed(1)} µm`, showarrow:false, yshift:8,
+                  font:{size:10, color:'#e0323f', family:'JetBrains Mono'}}] : [],
+    margin:{t:24,l:52,r:12,b:56}
+  }, {displaylogo:false, responsive:true});
+
+  document.getElementById('res-radial').innerHTML = (rCross!==null
+    ? [`Crossing radius r = ${rCross.toFixed(1)} µm — Ic·Ia 곡선이 교차하는 지점`,
+       `이 반경 안쪽이 Crystallized, 바깥쪽이 Amorphous 우세`]
+    : ['교차점 미검출 — 데이터가 한쪽으로 치우침']
+  ).map(b=>`<li>${b}</li>`).join('');
+
+  // --- ④ Ic·Ia의 r-공간 형태 위에 이론 가우시안 빔 프로파일 exp(-2r²/w²) 겹쳐그리기 ---
+  const rDense = linspace(0, rMax, 80);
+  const gaussCurve = rDense.map(rr=>Math.exp(-2*rr*rr/(w*w)));
+  Plotly.newPlot('plot-dose', [
+    {x:rDense, y:gaussCurve, mode:'lines', name:`이론 가우시안 exp(−2r²/w²), w=${w}`,
+     line:{color:'#9bb4cc', width:2, dash:'dot'}},
+    {x:rb, y:icN, mode:'markers+lines', name:'실측 Ic (정규화)', line:{color:'#0f9d68',width:2}, marker:{size:5}}
+  ], {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:10},
+    xaxis:{title:'중심으로부터 거리 r (µm)', gridcolor:'#e5e8ee'},
+    yaxis:{title:'정규화 강도', range:[0,1.08], gridcolor:'#e5e8ee'},
+    legend:{font:{size:9.5}, orientation:'h', y:-0.28},
+    shapes: rCross!==null ? [{type:'line', x0:rCross, x1:rCross, y0:0, y1:1.08, line:{color:'#e0323f',width:1.5,dash:'dash'}}] : [],
+    annotations: [
+      {x:0, y:1.08, text:`r=0 (코어) → F₀ = ${F0} mJ/cm²`, showarrow:false, xanchor:'left',
+       font:{size:9.5, color:'#6b7484', family:'JetBrains Mono'}},
+      ...(rCross!==null ? [{x:rCross, y:0.15, text:`F(${rCross.toFixed(1)}µm) ≈ ${(F0*Math.exp(-2*rCross*rCross/(w*w))).toFixed(0)} mJ/cm²`,
+       showarrow:false, xanchor:'left', xshift:6, font:{size:9.5, color:'#e0323f', family:'JetBrains Mono'}}] : [])
+    ],
+    margin:{t:24,l:52,r:12,b:56}
+  }, {displaylogo:false, responsive:true});
+
+  // --- threshold: Ic/Ia 교차 반경을 기준으로 국부 플루언스 환산 ---
+  const rTh = rCross;
+  const Fth = rTh!==null ? F0*Math.exp(-2*rTh*rTh/(w*w)) : null;
+
+  document.getElementById('res-dose').innerHTML = [
+    `Core (r=0): F₀ = ${F0} mJ/cm²`,
+    Fth!==null ? `Threshold fluence F_th ≈ ${Fth.toFixed(0)} mJ/cm² at r=${rTh.toFixed(1)}µm` : 'Threshold 미검출',
+    '중심 기준이 실제 스팟 코어와 다르면 이 값 전체가 틀어짐'
+  ].map(b=>`<li>${b}</li>`).join('');
+
+  // --- metrics ---
+  const fxc=flat(XC), st=stats(fxc);
+  const inSpec=fxc.filter(v=>v>=spec).length/fxc.length*100;
+  const Cpk=(st.mean-spec)/(3*st.sd+Number.EPSILON);
+  const cls=(v,g,wn)=> v>=g?'v-good':v>=wn?'v-warn':'v-bad';
+  const M=[
+    {k:'유효 공정 면적', v:frac[0].toFixed(1)+'%', s:'Crystallized 구역 비율'},
+    {k:'In-spec 수율', v:inSpec.toFixed(1)+'%', s:`Xc ≥ ${spec}`, c:cls(inSpec,90,70)},
+    {k:'균일도 CV', v:st.cv.toFixed(1)+'%', s:'낮을수록 균일', c:st.cv<15?'v-good':st.cv<30?'v-warn':'v-bad'},
+    {k:'공정능력 Cpk', v:Cpk.toFixed(2), s:'>1.33 양호 / <1.0 부적합', c:cls(Cpk,1.33,1.0)},
+    {k:'평균 Xc', v:st.mean.toFixed(3), s:`σ = ${st.sd.toFixed(3)}`},
+    {k:'Ia–Ic 상관', v:r.toFixed(3), s:'−1에 가까울수록 순수 상변화'},
+    {k:'Signal Loss 영역', v:frac[3].toFixed(1)+'%', s:'총신호 하위 '+(sigPct*100).toFixed(0)+'%', c:frac[3]<3?'v-good':frac[3]<10?'v-warn':'v-bad'},
+    {k:'Crystallized 임계 반경', v: rTh!==null? rTh.toFixed(1)+' µm':'—', s: Fth!==null? `F_th ≈ ${Fth.toFixed(0)} mJ/cm²`:'경계 미검출'}
+  ];
+  document.getElementById('metricsBox').innerHTML = M.map(m=>
+    `<div class="metric"><div class="k">${m.k}</div><div class="v ${m.c||''}">${m.v}</div><div class="s">${m.s}</div></div>`
+  ).join('');
+
+  // --- auto interpretation ---
+  const L=[];
+  L.push(`<b>분류 기준:</b> φ=Ic/(Ic+Ia) 기준 φ≥${phiHi.toFixed(2)} Crystallized · ${phiLo.toFixed(2)}≤φ<${phiHi.toFixed(2)} Partial · φ<${phiLo.toFixed(2)} Amorphous. 단, 총신호(Ic+Ia)가 하위 ${(sigPct*100).toFixed(0)}%인 지점은 상 판정 전에 먼저 Signal Loss로 분리했습니다.`);
+  if(r < -0.5){
+    L.push(`<b>상변화 지배적:</b> Ia와 Ic가 강한 음의 상관 (r = ${r.toFixed(2)}). a-Si가 소모된 만큼 c-Si가 생성되는 단순 a→c 상변화가 지배적이며, 물질 손실은 크지 않다고 볼 수 있습니다.`);
+  } else if(r < -0.2){
+    L.push(`<b>혼재된 거동:</b> Ia–Ic 상관이 중간 수준 (r = ${r.toFixed(2)}). 상변화 외에 두께 변화나 표면 거칠기에 의한 신호 변조가 함께 작용할 가능성이 있습니다.`);
+  } else {
+    L.push(`<b>주의 — 단순 상변화로 설명 불가:</b> Ia–Ic 상관이 약함 (r = ${r.toFixed(2)}). 두 신호가 같이 오르내리는 구간이 있다는 뜻이며, 이는 Crystallized가 아니라 <u>박막 두께 감소·표면 거칠기 증가·초점 이탈</u> 등 신호 자체의 손실을 의심해야 합니다.`);
+  }
+  if(frac[3] > 3){
+    L.push(`<b>Signal Loss 영역 ${frac[3].toFixed(1)}%:</b> 총신호(Ic+Ia) 자체가 하위 ${(sigPct*100).toFixed(0)}%인 지점입니다. ②번 산점도에서 원점 근처에 별도로 뭉친 덩어리가 보이면 실제 신호 손실이고, 그냥 이어진 분포의 꼬리라면 신호 임계값이 너무 높게 잡힌 것이니 슬라이더를 낮춰보세요. 해당 좌표(#번호)를 SEM으로 교차 확인을 권장합니다.`);
+  }
+  if(frac[1] > 10){
+    L.push(`<b>Partial 영역 ${frac[1].toFixed(1)}%:</b> a-Si와 c-Si 신호가 공존하는 구역이 넓게 형성되어 있습니다. 가우시안 빔 가장자리에서 플루언스가 완전 용융 임계값에 미달해 부분 용융(partial melting) 상태로 응고한 것으로 해석되며, SEM에서 작고 불균일한 결정립으로 관찰될 것으로 예상됩니다.`);
+  }
+  if(rTh!==null){
+    L.push(`<b>임계 플루언스 추정:</b> Crystallized 응답이 절반으로 떨어지는 반경은 r = ${rTh.toFixed(1)} µm이며, F(r) = F₀·exp(−2r²/w²) 적용 시 Crystallized 임계 플루언스는 <b>약 ${Fth.toFixed(0)} mJ/cm²</b>입니다. 단일 샷 맵 하나가 곧 플루언스 스윕이므로 조건을 여러 번 나눠 찍지 않고도 임계값을 뽑아낼 수 있습니다. (빔 파라미터 w, F₀ 정확도에 결과가 직접 좌우됨 — 빔 프로파일러 실측값 필요.)`);
+  }
+  L.push(`<b>공정능력 관점:</b> Xc ≥ ${spec} 기준 in-spec 비율 ${inSpec.toFixed(1)}%, CV ${st.cv.toFixed(1)}%, Cpk ${Cpk.toFixed(2)}. ` +
+    (Cpk>=1.33 ? '반도체 양산 기준(Cpk ≥ 1.33)을 만족하는 수준의 균일도입니다.'
+     : Cpk>=1.0 ? '한계 수준입니다. 스캔 중첩률을 높이거나 플루언스를 임계값 대비 여유 있게 설정해 산포를 줄일 필요가 있습니다.'
+     : '단일 샷 기준이므로 당연한 결과입니다. 실제 대면적 공정에서는 샷 중첩(overlap)으로 가장자리 저플루언스 영역을 덮어야 합니다.'));
+  L.push(`<b>중첩률 설계 시사점:</b> 중심부 대비 응답이 유지되는 반경이 ${rTh!==null?rTh.toFixed(1):'—'} µm이므로, 균일한 대면적 결정화를 위해서는 샷 간격을 이보다 좁게 (겹침 비율 기준 약 ${rTh!==null?(100*(1-rTh/(2*w))).toFixed(0):'—'}% 이상) 가져가야 저플루언스 링이 남지 않습니다.`);
+
+  document.getElementById('interpBox').style.display='block';
+  document.getElementById('interpBox').innerHTML =
+    '<h5>자동 해석 (Auto-interpretation)</h5><ul>' + L.map(x=>`<li>${x}</li>`).join('') + '</ul>' +
+    '<div style="margin-top:10px; font-size:11px; color:var(--sub); border-top:1px solid var(--line); padding-top:9px;">' +
+    '위 문장은 계산된 지표에 규칙 기반으로 생성된 초안입니다. 임계값·빔 파라미터에 따라 결론이 달라지므로, 반드시 SEM·XRD 등 독립적 측정으로 교차 검증하세요.</div>';
+
+  if(!silent) log('완료! ✓');
+}
+
+document.getElementById('otsuBtn').addEventListener('click', ()=>{
+  if(!state){ log('먼저 PROCESS를 실행하세요','log-err'); return; }
+  const IC=state.ic, IA=state.ia;
+  const phi = flat(IC.map((row,i)=>row.map((v,j)=> v/(v+IA[i][j]+Number.EPSILON) )));
+
+  // 신호 임계는 전체 데이터 중 몇 %를 "손실"로 강제 편입시키는 값이라, 실제로 이중분포가
+  // 아닌 경우(대부분의 깨끗한 시료)에 Otsu를 적용하면 억지로 큰 덩어리를 손실로 잘라내는
+  // 문제가 있었습니다. 그래서 자동 조정은 φ(비율)에만 적용하고, 신호 임계는 수동으로 둡니다.
+  function otsuSplit(arr){
+    const sorted = arr.slice().sort((a,b)=>a-b);
+    const mn = sorted[Math.floor(sorted.length*0.01)];
+    const mx = sorted[Math.ceil(sorted.length*0.99)-1];
+    const NB=128;
+    const hist=new Array(NB).fill(0);
+    arr.forEach(v=>{
+      const cv = Math.min(Math.max(v,mn),mx);
+      hist[Math.min(NB-1,Math.floor((cv-mn)/(mx-mn+Number.EPSILON)*NB))]++;
+    });
+    const totC=arr.length;
+    let sum=0; hist.forEach((h,i)=>sum+=i*h);
+    let sumB=0,wB=0,best=0,bestVar=-1;
+    for(let t=0;t<NB;t++){
+      wB+=hist[t]; if(!wB) continue;
+      const wF=totC-wB; if(!wF) break;
+      sumB+=t*hist[t];
+      const mB=sumB/wB, mF=(sum-sumB)/wF;
+      const v=wB*wF*(mB-mF)*(mB-mF);
+      if(v>bestVar){bestVar=v; best=t;}
+    }
+    return mn + (best+0.5)/NB*(mx-mn);
+  }
+
+  const phiSplit = otsuSplit(phi);
+  const phiHiPct = Math.round(phiSplit*100), phiLoPct = Math.round(phiHiPct/2);
+  document.getElementById('phiHi').value=phiHiPct;
+  document.getElementById('phiLo').value=phiLoPct;
+  syncPhiHandles();
+
+  log('φ 자동 적용!');
+  runProcess(true);
+});
+
+// ---------- α sensitivity & back-calculation ----------
+function xcFromAlpha(a){
+  const out = [];
+  for(let i=0;i<state.ic.length;i++){
+    for(let j=0;j<state.ic[0].length;j++){
+      const ic = state.ic[i][j], ia = state.ia[i][j];
+      out.push(Math.min(Math.max(ic/(ic + a*ia + Number.EPSILON),0),1));
+    }
+  }
+  return out;
+}
+function meanOf(arr){ return arr.reduce((s,v)=>s+v,0)/arr.length; }
+
+document.getElementById('runAlphaBtn').addEventListener('click', ()=>{
+  if(!state){ log('먼저 PROCESS를 실행하세요','log-err'); return; }
+  const alphas=[], means=[], p10=[], p90=[];
+  for(let a=0.1; a<=2.001; a+=0.05){
+    const v = xcFromAlpha(a).sort((x,y)=>x-y);
+    alphas.push(+a.toFixed(2));
+    means.push(meanOf(v));
+    p10.push(v[Math.floor(v.length*0.10)]);
+    p90.push(v[Math.floor(v.length*0.90)]);
+  }
+  Plotly.newPlot('plot-alpha', [
+    {x:alphas, y:p90, mode:'lines', name:'상위 10% 지점', line:{color:'#9bb4cc', width:1.5, dash:'dot'}},
+    {x:alphas, y:means, mode:'lines', name:'맵 평균 Xc', line:{color:'#0f9d68', width:2.5}},
+    {x:alphas, y:p10, mode:'lines', name:'하위 10% 지점', line:{color:'#9bb4cc', width:1.5, dash:'dot'}}
+  ], {
+    paper_bgcolor:'#f7f8fa', plot_bgcolor:'#f7f8fa',
+    font:{color:'#6b7484', family:'JetBrains Mono', size:11},
+    xaxis:{title:'α', gridcolor:'#e5e8ee'},
+    yaxis:{title:'Xc', range:[0,1], gridcolor:'#e5e8ee'},
+    legend:{font:{size:10}, orientation:'h', y:-0.25},
+    margin:{t:10,l:55,r:20,b:60}
+  }, {displaylogo:false, responsive:true});
+
+  document.getElementById('alphaNote').innerHTML =
+    'α가 커질수록 Xc 절대값은 전체적으로 내려가지만, 상·하위 지점의 <b>상대 순서는 어떤 α에서도 바뀌지 않습니다</b> ' +
+    '(Xc = 1/(1+α·Ia/Ic) 가 Ic/Ia에 대해 단조증가). 따라서 "경계 부근에서 결정성이 변했다"는 공간적 해석은 α 선택과 무관하게 유효하고, ' +
+    'α에 의존하는 것은 절대 수치뿐입니다. α=1로 두면 보정 없는 Raman crystallinity factor φc = Ic/(Ic+Ia)가 되며, ' +
+    '이는 문헌 인용 없이 보고 가능한 값입니다.';
+});
+
+document.getElementById('solveAlphaBtn').addEventListener('click', ()=>{
+  if(!state){ log('먼저 PROCESS를 실행하세요','log-err'); return; }
+  const target = +document.getElementById('extXc').value / 100;
+  if(!(target>0 && target<1)){
+    document.getElementById('alphaResult').textContent = '0~100% 사이 값을 입력하세요';
+    return;
+  }
+  let lo=0.01, hi=20, mid;
+  if(meanOf(xcFromAlpha(lo)) < target || meanOf(xcFromAlpha(hi)) > target){
+    document.getElementById('alphaResult').textContent = '해당 범위에서 α 해 없음';
+    return;
+  }
+  for(let it=0; it<60; it++){
+    mid=(lo+hi)/2;
+    if(meanOf(xcFromAlpha(mid)) > target) lo=mid; else hi=mid;
+  }
+  document.getElementById('alphaResult').textContent = `α = ${mid.toFixed(3)}`;
+  document.getElementById('alpha').value = mid.toFixed(3);
+  document.getElementById('alphaNote').innerHTML =
+    `평균 Xc가 ${(target*100).toFixed(0)}%가 되도록 맞춘 α입니다. 이 값은 <b>이 시료·이 여기광 파장에 한정된 경험적 보정값</b>이며 ` +
+    `물리적 산란 단면적 비의 참값이 아닙니다. 논문에 쓸 때는 "외부 측정값(SE/XRD)에 캘리브레이션한 값"이라고 명시하세요. ` +
+    `PROCESS를 다시 눌러 이 α로 맵을 갱신할 수 있습니다.`;
+});
+
+
+// sidebar per-group GO buttons
+document.querySelectorAll('.gobtn.go').forEach(b=>{
+  b.addEventListener('click', ()=>document.getElementById('runBtn').click());
+});
+function syncGoButtons(){
+  const dis = document.getElementById('runBtn').disabled;
+  document.querySelectorAll('.gobtn.go').forEach(b=>b.disabled=dis);
+}
+new MutationObserver(syncGoButtons).observe(document.getElementById('runBtn'),{attributes:true});
+
+refreshGridPreview();
+syncGoButtons();
+</script>
+</body>
+</html>

@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCANLAB Studio</title>
+<style>
+  :root{
+    --bg:#ffffff; --ink:#14151a; --sub:#6b7280; --line:#e6e7eb; --line-strong:#d2d4da;
+    --accent:#7c3aed; --panel:#fafafa; --warn:#b45309;
+    --mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+    --sans: -apple-system, "Segoe UI", "Pretendard", "Malgun Gothic", sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); display:flex; justify-content:center; padding:24px 14px 60px; }
+  .app{ width:100%; max-width:1060px; }
+  .imgPreviewHead{ display:flex; align-items:center; justify-content:space-between; }
+  .iconBtn{ padding:3px 8px; font-size:12px; line-height:1; border-radius:3px; }
+  .fileBtn.dragover{ background:var(--accent-soft,#efe7fd); border-color:var(--accent); color:var(--accent); }
+  header{ margin-bottom:14px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;}
+  header h1{ font-size:16px; font-weight:700; letter-spacing:-0.01em; margin:0 0 4px; }
+  header p{ margin:0; font-size:12px; color:var(--sub); font-family:var(--mono); line-height:1.6; }
+  .fileBox{ display:flex; align-items:center; gap:8px; }
+  .fileBtn{
+    font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer;
+    border:1px dashed var(--line-strong); background:#fff; color:var(--ink);
+    padding:8px 12px; border-radius:4px;
+  }
+  .fileBtn:hover{ background:var(--panel); }
+  #fileInput{ display:none; }
+  .modeTag{ font-family:var(--mono); font-size:10.5px; padding:3px 7px; border-radius:3px; background:var(--accent-soft,#efe7fd); color:var(--accent); display:inline-block; }
+
+  .stage{ position:relative; width:100%; aspect-ratio:1/1; max-width:760px; margin:0; border:1px solid var(--line); border-radius:2px; background:#fff; overflow:hidden; touch-action:none; }
+  canvas{ position:absolute; top:0; left:0; width:100%; height:100%; }
+  #overlay{ pointer-events:none; }
+  .interact{ position:absolute; top:0; left:0; width:100%; height:100%; cursor:grab; }
+  .interact.dragging{ cursor:grabbing; }
+
+  .hud{ display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin:8px 0 0; max-width:760px; font-family:var(--mono); font-size:10.5px; }
+  .hud div{ background:var(--panel); padding:5px 7px; }
+  .hud .k{ color:var(--sub); font-size:8.5px; text-transform:uppercase; letter-spacing:.03em; margin-bottom:2px; }
+  .hud .v{ font-weight:600; }
+
+  .controls{ max-width:580px; margin:12px auto 0; display:flex; flex-direction:column; gap:9px; }
+  .row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  button{ font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer; border:1px solid var(--line-strong); background:#fff; color:var(--ink); padding:6px 12px; border-radius:3px; transition:background .12s; }
+  button:hover{ background:var(--panel); }
+  button.primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  button.primary:hover{ background:#2b2c33; }
+  button.ghost{ border-color:transparent; color:var(--sub); padding:6px 8px; }
+  input[type=range]{ -webkit-appearance:none; flex:1; height:3px; background:var(--line-strong); border-radius:2px; outline:none; min-width:100px;}
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--accent); cursor:pointer; border:2px solid #fff; box-shadow:0 0 0 1px var(--accent); }
+  .label{ font-family:var(--mono); font-size:10.5px; color:var(--sub); white-space:nowrap; min-width:70px; }
+  .rate-val{ font-family:var(--mono); font-size:11px; min-width:52px; text-align:right; }
+  .checkline{ display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--sub); }
+
+  .legend{ max-width:580px; margin:14px auto 0; font-family:var(--mono); font-size:11px; color:var(--sub); }
+  .grad{ height:8px; border-radius:2px; margin:6px 0 4px; background:linear-gradient(90deg,#2563eb,#0ea5e9,#f59e0b); }
+  .grad-labels{ display:flex; justify-content:space-between; }
+  .note{ margin-top:10px; font-size:11px; color:var(--sub); line-height:1.7; }
+  .note b{ color:var(--ink); }
+  .swatch{ display:inline-block; width:14px; height:2px; vertical-align:middle; margin-right:5px; }
+  .warnBox{ max-width:580px; margin:12px auto 0; font-family:var(--mono); font-size:10.5px; color:var(--warn); background:#fffbeb; border:1px solid #fde68a; border-radius:4px; padding:8px 10px; display:none; white-space:pre-wrap; line-height:1.6; }
+
+  .tabs{ display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--line); }
+  .tabBtn{ font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer; border:none; background:none; color:var(--sub); padding:9px 4px; margin-right:14px; border-bottom:2px solid transparent; border-radius:0; }
+  .tabBtn.active{ color:var(--ink); border-bottom-color:var(--accent); }
+  .tabBtn:hover{ background:none; color:var(--ink); }
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .drawWrap{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; }
+  .drawMain{ flex:1; min-width:300px; }
+  .toolbar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .tool-btn{ font-size:12px; padding:6px 10px; }
+  .tool-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .drawCanvasWrap{ position:relative; width:100%; max-width:560px; aspect-ratio:1/1; border:1px solid var(--line); border-radius:2px; background:#fff; }
+  #drawCanvas{ position:absolute; top:0; left:0; width:100%; height:100%; cursor:crosshair; touch-action:none; }
+  .hint{ font-family:var(--mono); font-size:10.5px; color:var(--sub); margin-top:8px; line-height:1.6; max-width:560px; }
+
+  .sidePanel{ width:250px; flex-shrink:0; display:flex; flex-direction:column; gap:7px; }
+  .panelTitle{ font-family:var(--sans); font-size:12px; font-weight:700; margin-top:4px; }
+  .viewWrap{ display:flex; gap:10px; align-items:flex-start; }
+  .viewMain{ flex:1; min-width:0; }
+  .optCard{ background:#faf5ff; border:1px solid #e9d5ff; border-radius:6px; padding:11px; }
+  .optPctBig{ font-size:26px; font-weight:800; color:var(--accent); font-family:var(--mono); line-height:1; }
+  .optSub{ font-size:10px; color:var(--sub); margin:2px 0 9px; }
+  .optBarRow{ display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:9.5px; margin-bottom:5px; }
+  .optBarLabel{ width:42px; color:var(--sub); flex-shrink:0; }
+  .optBarTrack{ flex:1; height:7px; background:#ece9f5; border-radius:3px; overflow:hidden; }
+  .optBarFill{ height:100%; border-radius:3px; width:0%; transition:width .3s; }
+  .optBarNaive{ background:#c9803b; }
+  .optBarSmart{ background:#2563eb; }
+  .field{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-family:var(--mono); font-size:11px; color:var(--sub); }
+  .field input[type=number], .field select{ width:78px; font-family:var(--mono); font-size:11px; border:1px solid var(--line-strong); border-radius:3px; padding:4px 5px; color:var(--ink); }
+  .shapeList{ border:1px solid var(--line); border-radius:4px; max-height:170px; overflow:auto; }
+  .shapeRow{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 8px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:10.5px; cursor:pointer; }
+  .shapeRow:last-child{ border-bottom:none; }
+  .shapeRow.selected{ background:var(--accent-soft,#efe7fd); }
+  .shapeRow select{ font-family:var(--mono); font-size:10px; border:1px solid var(--line-strong); border-radius:3px; padding:2px 3px; }
+  .imgPreviewBox{ display:none; flex-direction:column; gap:6px; }
+  .imgPreviewBox canvas{ position:static; width:100%; max-height:340px; height:auto; object-fit:contain; border:1px solid var(--line); border-radius:3px; image-rendering:pixelated; background:#f5f5f6; cursor:crosshair; }
+  .fullw{ width:100%; }
+  pre.codeBlock{ background:#0f1117; color:#d9dbe3; font-family:var(--mono); font-size:10.5px; line-height:1.6; padding:12px 14px; border-radius:4px; overflow:auto; white-space:pre; max-height:360px; margin:6px 0 0; }
+  .verifyGrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); font-family:var(--mono); font-size:11px; }
+  .verifyGrid div{ background:var(--panel); padding:10px; }
+  .verifyGrid .k{ color:var(--sub); font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+  .verifyGrid .v{ font-weight:700; font-size:15px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="tabs">
+    <button class="tabBtn active" data-tab="draw">그리기</button>
+    <button class="tabBtn" data-tab="view">빔 경로 뷰어</button>
+  </div>
+
+  <div class="screen active" id="screen-draw">
+    <div class="drawWrap">
+      <div class="drawMain">
+        <div class="toolbar">
+          <button class="tool-btn active" data-tool="pen">✏️ 펜(손그림)</button>
+          <button class="tool-btn" data-tool="rect">▭ 사각형</button>
+          <button class="tool-btn" data-tool="circle">◯ 원</button>
+          <button class="tool-btn" data-tool="triangle">△ 삼각형(3클릭)</button>
+          <button class="tool-btn" data-tool="select">↖ 선택/이동</button>
+          <button class="tool-btn" data-tool="pan">✋ 화면이동</button>
+          <span style="flex:1"></span>
+          <button id="btn-undo" title="실행취소">↶</button>
+          <button id="btn-delete">선택삭제</button>
+          <button id="btn-clear">전체지우기</button>
+        </div>
+        <div class="row" id="selBar" style="margin-bottom:8px; min-height:28px;">
+          <span class="label" id="selInfo" style="min-width:auto;">도형을 선택하면 윤곽선/채움 모드를 변경할 수 있습니다</span>
+          <button id="btn-mode-outline" disabled>윤곽선으로</button>
+          <button id="btn-mode-fill" disabled>채움으로</button>
+          <span style="flex:1"></span>
+          <button class="ghost" id="btn-draw-zoomout">－</button>
+          <button class="ghost" id="btn-draw-zoomin">＋</button>
+          <button id="btn-draw-fitall">전체보기</button>
+        </div>
+        <div class="drawCanvasWrap"><canvas id="drawCanvas"></canvas></div>
+      </div>
+      <div class="sidePanel">
+        <div class="panelTitle">도형/조각 목록</div>
+        <div class="shapeList" id="shapeList"></div>
+
+        <div class="panelTitle">작업영역 / 마킹 설정</div>
+        <div class="field"><span>작업영역 크기(mm)</span><input type="number" id="ws-size" value="20" min="2" step="1"></div>
+        <div class="field"><span>새 도형 기본모드</span>
+          <select id="default-mode"><option value="outline">윤곽선만</option><option value="fill">내부채움</option></select>
+        </div>
+        <div class="field"><span>rep rate(kHz)</span><input type="number" id="rep-rate" value="50" min="1" step="1"></div>
+        <div class="field"><span>hatch pitch(µm)</span><input type="number" id="hatch-pitch" value="5" min="0.1" step="0.1"></div>
+        <div class="field"><span>hatch 각도(deg)</span><input type="number" id="hatch-angle" value="0" step="15"></div>
+        <div class="field"><span>marking speed(자동계산)</span><b id="calc-speed" style="font-family:var(--mono); font-size:11px;">0.250 m/s</b></div>
+        <div class="field"><span>jump speed(m/s)</span><input type="number" id="jump-speed" value="3" min="0.01" step="0.1"></div>
+
+        <div class="panelTitle">이미지에서 윤곽선 추출</div>
+        <label class="fileBtn fullw" for="imgInput" id="imgDropZone" style="text-align:center;">이미지 업로드 (또는 드래그 앤 드롭)</label>
+        <input type="file" id="imgInput" accept="image/*" style="display:none;">
+        <div class="imgPreviewBox" id="imgPreviewBox">
+          <div class="imgPreviewHead">
+            <span class="panelTitle" style="margin:0;">미리보기</span>
+            <button id="btn-img-clear" title="이미지 전체 삭제" class="iconBtn">🗑</button>
+          </div>
+          <canvas id="imgPreviewCanvas"></canvas>
+          <div class="field"><span>threshold</span><input type="range" id="img-threshold" min="1" max="254" value="128" style="flex:1; width:auto;"></div>
+          <div class="checkline"><input type="checkbox" id="img-invert"><label for="img-invert">반전(밝은 부분 인식)</label></div>
+          <div class="field"><span>브러시 크기(px)</span><input type="range" id="img-brush" min="2" max="40" value="12" style="flex:1; width:auto;"></div>
+          <div class="row" style="gap:6px;">
+            <button id="btn-erase-toggle" style="flex:1;">지우개(흰색)</button>
+            <button id="btn-paint-toggle" style="flex:1;">칠하기(검정)</button>
+          </div>
+          <div class="row" style="gap:6px;">
+            <button id="btn-img-undo" title="실행취소" style="flex:1;">↶ 실행취소</button>
+            <button id="btn-erase-reset" style="flex:1;">원본 복원</button>
+          </div>
+          <div class="field"><span>불러올 크기(긴변,mm)</span><input type="number" id="img-size" value="10" min="1" step="1"></div>
+          <button class="fullw" id="btn-extract">윤곽선 추출해서 도형으로 추가</button>
+        </div>
+
+        <button class="primary fullw" id="btn-generate" style="margin-top:6px;">한붓그리기 경로 미리보기 생성 →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-view">
+
+  <header>
+    <div>
+      <h1>SCANLAB Studio</h1>
+      <p id="src-info">기본 로드: Rasterscan_I0340_N800_260429.m</p>
+    </div>
+    <div class="fileBox">
+      <span class="modeTag" id="modeTag">polygon</span>
+      <label class="fileBtn" for="fileInput">.m 파일 불러오기</label>
+      <input type="file" id="fileInput" accept=".m,.txt">
+    </div>
+  </header>
+
+  <div class="viewWrap">
+    <div class="viewMain">
+      <div class="stage">
+        <canvas id="base"></canvas>
+        <canvas id="overlay"></canvas>
+        <div class="interact" id="interact"></div>
+      </div>
+      <div class="hud">
+        <div><div class="k">cell</div><div class="v" id="hud-cell">–</div></div>
+        <div><div class="k">X (mm)</div><div class="v" id="hud-x">–</div></div>
+        <div><div class="k">Y (mm)</div><div class="v" id="hud-y">–</div></div>
+        <div><div class="k">speed</div><div class="v" id="hud-speed">–</div></div>
+        <div><div class="k">elapsed / total</div><div class="v" id="hud-time">–</div></div>
+        <div><div class="k">zoom</div><div class="v" id="hud-zoom">1.0×</div></div>
+      </div>
+    </div>
+
+    <div class="sidePanel">
+      <div class="row" style="gap:6px;">
+        <button id="btn-back-to-draw">← 그리기</button>
+        <button id="btn-export">.sld로 내보내기</button>
+      </div>
+
+      <div class="panelTitle">재생</div>
+      <div class="row" style="gap:6px;">
+        <button class="primary" id="btn-play" style="flex:1;">재생</button>
+        <button id="btn-reset" style="flex:1;">처음으로</button>
+      </div>
+      <div class="row" style="gap:6px;">
+        <button id="btn-prev" style="flex:1;">◀ 이전</button>
+        <button id="btn-next" style="flex:1;">다음 ▶</button>
+      </div>
+      <div class="field"><span>재생 배속</span><span class="rate-val" id="rate-val">1.0×</span></div>
+      <input type="range" id="rate" min="0" max="1000" value="425" step="1">
+      <div class="field"><span>스크럽</span></div>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1">
+      <div class="checkline"><input type="checkbox" id="chk-jump" checked><label for="chk-jump">점프 구간도 표시</label></div>
+      <div class="checkline"><input type="checkbox" id="chk-autostop"><label for="chk-autostop">cell 전환마다 자동정지</label></div>
+
+      <div class="panelTitle">확대/이동</div>
+      <div class="row" style="gap:6px;">
+        <button class="ghost" id="btn-zoomout" style="flex:1;">－</button>
+        <button class="ghost" id="btn-zoomin" style="flex:1;">＋</button>
+      </div>
+      <div class="row" style="gap:6px;">
+        <button id="btn-fitcell" style="flex:1;">현재 cell</button>
+        <button id="btn-fitall" style="flex:1;">전체 보기</button>
+      </div>
+
+      <div class="panelTitle">색상 범례</div>
+      <div class="grad"></div>
+      <div class="grad-labels"><span id="leg-min">–</span><span id="leg-max">–</span></div>
+      <div class="hint" style="max-width:none; margin-top:2px;">실선=빔 이동 경로 · 회색 점선=cell 경계</div>
+      <div class="hint" style="max-width:none; margin-top:0;" id="kind-note">polygon 타입입니다.</div>
+
+      <div class="panelTitle">경로 최적화</div>
+      <div class="optCard" id="optCard" style="display:none;">
+        <div class="optPctBig" id="stat-pct">–</div>
+        <div class="optSub">방향 고정 순서 대비 점프 거리 단축</div>
+        <div class="optBarRow"><span class="optBarLabel">방향고정</span><div class="optBarTrack"><div class="optBarFill optBarNaive" id="optBarNaive"></div></div><span id="stat-naive">–</span></div>
+        <div class="optBarRow"><span class="optBarLabel">최적화</span><div class="optBarTrack"><div class="optBarFill optBarSmart" id="optBarSmart"></div></div><span id="stat-smart">–</span></div>
+        <div class="row" style="gap:5px; margin-top:8px;">
+          <button class="routeModeBtn primary" data-mode="smart" style="flex:1; font-size:10.5px; padding:5px 6px;">최적화</button>
+          <button class="routeModeBtn" data-mode="naive" style="flex:1; font-size:10.5px; padding:5px 6px;">방향고정</button>
+        </div>
+        <div class="row" style="gap:5px; margin-top:5px;">
+          <button class="routeModeBtn fullw" data-mode="dual" style="font-size:10.5px; padding:5px 6px;">두 경로 동시 재생 비교</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warnBox" id="warnBox"></div>
+
+  </div><!-- /screen-view -->
+
+</div>
+
+<script>
+(function(){
+
+  // 브라우저 기본 동작(파일을 탭에 그냥 띄워버리는 것) 방지 — 업로드는 버튼을 통해서만
+  ['dragover','drop'].forEach(evt=>{
+    window.addEventListener(evt, e=>{
+      if(e.target && (e.target.id==='imgInput' || e.target.id==='fileInput')) return;
+      e.preventDefault();
+    });
+  });
+
+  // ============================================================
+  // 1. mini-MATLAB 프리앰블 인터프리터 (변수 할당부만 실행, for-loop 진입 전 정지)
+  // ============================================================
+  function mkScalar(v){ return {rows:1,cols:1,data:[[v]]}; }
+  function mkRow(arr){ return {rows:1,cols:arr.length,data:[arr.slice()]}; }
+  function isScalar(m){ return m.rows===1 && m.cols===1; }
+  function isStrCell(x){ return typeof x==='string'; }
+  function transpose(m){ const d=[]; for(let c=0;c<m.cols;c++){ const row=[]; for(let r=0;r<m.rows;r++) row.push(m.data[r][c]); d.push(row);} return {rows:m.cols,cols:m.rows,data:d}; }
+  function repmatFn(m,mm,nn){ const R=m.rows*mm,C=m.cols*nn; const d=[]; for(let r=0;r<R;r++){const row=[];for(let c=0;c<C;c++)row.push(m.data[r%m.rows][c%m.cols]); d.push(row);} return {rows:R,cols:C,data:d}; }
+  function onesFn(r,c,val){ const d=[]; for(let i=0;i<r;i++){const row=[];for(let j=0;j<c;j++)row.push(val===undefined?1:val); d.push(row);} return {rows:r,cols:c,data:d}; }
+  function colonFn(a,step,b){ const arr=[]; step=(step===null||step===undefined)?1:step;
+    if(step>0){ for(let v=a; v<=b+1e-9; v+=step) arr.push(Math.round(v*1e6)/1e6); }
+    else if(step<0){ for(let v=a; v>=b-1e-9; v+=step) arr.push(Math.round(v*1e6)/1e6); }
+    return mkRow(arr); }
+  function lengthFn(m){ return mkScalar(Math.max(m.rows,m.cols)); }
+  function elementwise(m,fn){ return {rows:m.rows,cols:m.cols,data:m.data.map(row=>row.map(fn))}; }
+  function broadcastBinOp(a,b,fn){
+    if(isScalar(a)&&!isScalar(b)) return elementwise(b,x=>fn(a.data[0][0],x));
+    if(isScalar(b)&&!isScalar(a)) return elementwise(a,x=>fn(x,b.data[0][0]));
+    if(isScalar(a)&&isScalar(b)) return mkScalar(fn(a.data[0][0],b.data[0][0]));
+    const R=Math.max(a.rows,b.rows), C=Math.max(a.cols,b.cols); const d=[];
+    for(let r=0;r<R;r++){ const row=[]; for(let c=0;c<C;c++){
+      const av=a.data[a.rows===1?0:r][a.cols===1?0:c]; const bv=b.data[b.rows===1?0:r][b.cols===1?0:c];
+      row.push(fn(av,bv)); } d.push(row); }
+    return {rows:R,cols:C,data:d};
+  }
+  function linIndex(m,g){ const idx0=g-1; const R=m.rows; const col=Math.floor(idx0/R); const row=idx0%R; return m.data[row][col]; }
+  function linIndexSet(m,g,val){ const idx0=g-1; const R=m.rows; const col=Math.floor(idx0/R); const row=idx0%R; m.data[row][col]=val; }
+
+  function tokenize(line){
+    const toks=[]; let i=0; const N=line.length;
+    while(i<N){
+      const ch=line[i];
+      if(/\s/.test(ch)){ i++; continue; }
+      if(ch==="'"){
+        const prev=toks[toks.length-1];
+        const isTranspose = prev && ((prev.t==='id')||(prev.t==='num')||(prev.t==='op'&&(prev.v===')'||prev.v===']'||prev.v==="'")));
+        if(isTranspose){ toks.push({t:'op',v:"'"}); i++; continue; }
+        let j=i+1,s=''; while(j<N && line[j]!=="'"){ s+=line[j]; j++; }
+        toks.push({t:'str',v:s}); i=j+1; continue;
+      }
+      if(/[0-9]/.test(ch) || (ch==='.'&&/[0-9]/.test(line[i+1]||''))){
+        let j=i,s=''; while(j<N && /[0-9.]/.test(line[j])){ s+=line[j]; j++; }
+        if(line[j]==='e'||line[j]==='E'){ s+=line[j]; j++; if(line[j]==='+'||line[j]==='-'){s+=line[j];j++;} while(j<N&&/[0-9]/.test(line[j])){s+=line[j];j++;} }
+        toks.push({t:'num',v:parseFloat(s)}); i=j; continue;
+      }
+      if(/[A-Za-z_]/.test(ch)){ let j=i,s=''; while(j<N&&/[A-Za-z0-9_]/.test(line[j])){s+=line[j];j++;} toks.push({t:'id',v:s}); i=j; continue; }
+      const two=line.slice(i,i+2);
+      if(['==','~=','<=','>=','.*','./'].includes(two)){ toks.push({t:'op',v:two}); i+=2; continue; }
+      if('()[],:+-*/=<>\''.includes(ch)){ toks.push({t:'op',v:ch}); i++; continue; }
+      i++;
+    }
+    return toks;
+  }
+
+  function parseExprTokens(toks){
+    let p=0;
+    function peek(){ return toks[p]; }
+    function eat(v){ const t=toks[p]; if(!t) throw new Error('unexpected end'); if(v && t.v!==v) throw new Error('expected '+v+' got '+t.v); p++; return t; }
+    function parseExpr(){ return parseColon(); }
+    function parseColon(){
+      let a=parseAdd();
+      if(peek() && peek().t==='op' && peek().v===':'){
+        eat(':'); let b=parseAdd();
+        if(peek() && peek().t==='op' && peek().v===':'){ eat(':'); let c=parseAdd(); return {type:'range',a,step:b,b:c}; }
+        return {type:'range',a,step:null,b};
+      }
+      return a;
+    }
+    function parseAdd(){ let node=parseMul(); while(peek()&&peek().t==='op'&&(peek().v==='+'||peek().v==='-')){ const op=eat().v; const r=parseMul(); node={type:'binop',op,l:node,r}; } return node; }
+    function parseMul(){ let node=parseCompare(); while(peek()&&peek().t==='op'&&['*','/','.*','./'].includes(peek().v)){ const op=eat().v; const r=parseCompare(); node={type:'binop',op:op.replace('.',''),l:node,r}; } return node; }
+    function parseCompare(){ let node=parseUnary(); while(peek()&&peek().t==='op'&&['==','~=','<','>','<=','>='].includes(peek().v)){ const op=eat().v; const r=parseUnary(); node={type:'binop',op,l:node,r}; } return node; }
+    function parseUnary(){ if(peek()&&peek().t==='op'&&peek().v==='-'){ eat('-'); return {type:'unary',op:'-',e:parseUnary()}; } if(peek()&&peek().t==='op'&&peek().v==='+'){ eat('+'); return parseUnary(); } return parsePostfix(); }
+    function parsePostfix(){
+      let node=parsePrimary();
+      for(;;){
+        if(peek()&&peek().t==='op'&&peek().v==="'"){ eat("'"); node={type:'transpose',e:node}; continue; }
+        if(peek()&&peek().t==='op'&&peek().v==='('){
+          eat('('); const args=[];
+          if(!(peek()&&peek().t==='op'&&peek().v===')')){ args.push(parseExpr()); while(peek()&&peek().t==='op'&&peek().v===','){ eat(','); args.push(parseExpr()); } }
+          eat(')'); node={type:'call',target:node,args}; continue;
+        }
+        break;
+      }
+      return node;
+    }
+    function parsePrimary(){
+      const t=peek(); if(!t) throw new Error('unexpected end in primary');
+      if(t.t==='num'){ eat(); return {type:'num',v:t.v}; }
+      if(t.t==='str'){ eat(); return {type:'str',v:t.v}; }
+      if(t.t==='id'){ eat(); return {type:'ident',name:t.v}; }
+      if(t.t==='op'&&t.v==='('){ eat('('); const e=parseExpr(); eat(')'); return e; }
+      if(t.t==='op'&&t.v==='['){
+        eat('['); const elems=[];
+        if(!(peek()&&peek().t==='op'&&peek().v===']')){
+          elems.push(parseExpr());
+          while(!(peek()&&peek().t==='op'&&peek().v===']')){
+            if(peek()&&peek().t==='op'&&peek().v===','){ eat(','); }
+            if(peek()&&peek().t==='op'&&peek().v===']') break;
+            elems.push(parseExpr());
+          }
+        }
+        eat(']'); return {type:'array',elems};
+      }
+      throw new Error('unexpected token '+JSON.stringify(t));
+    }
+    return parseExpr();
+  }
+
+  const FUNCS = new Set(['ones','zeros','repmat','length','round','rem','mod','find','abs','sqrt','fopen','fprintf','fclose']);
+  function evalNode(node, table, warnings){
+    switch(node.type){
+      case 'num': return mkScalar(node.v);
+      case 'str': return node.v.length<=1 ? mkScalar(node.v.length?node.v:'') : mkRow(node.v.split(''));
+      case 'ident': if(node.name in table) return table[node.name]; warnings.push('undefined var: '+node.name); return mkScalar(0);
+      case 'array': {
+        const parts=node.elems.map(e=>evalNode(e,table,warnings));
+        if(parts.length===0) return {rows:0,cols:0,data:[]};
+        const rows=parts[0].rows; const cols=parts.reduce((s,p)=>s+p.cols,0);
+        const d=[]; for(let r=0;r<rows;r++) d.push([]);
+        for(const p of parts) for(let r=0;r<rows;r++) d[r].push(...p.data[Math.min(r,p.rows-1)]);
+        return {rows,cols,data:d};
+      }
+      case 'range': {
+        const a=evalNode(node.a,table,warnings).data[0][0];
+        const step=node.step? evalNode(node.step,table,warnings).data[0][0] : null;
+        const b=evalNode(node.b,table,warnings).data[0][0];
+        return colonFn(a,step,b);
+      }
+      case 'unary': return elementwise(evalNode(node.e,table,warnings), x=>-x);
+      case 'transpose': return transpose(evalNode(node.e,table,warnings));
+      case 'binop': {
+        if(node.op==='*'){
+          const a=evalNode(node.l,table,warnings), b=evalNode(node.r,table,warnings);
+          if(isScalar(a)&&isStrCell(a.data[0][0])&&!isScalar(b)) return elementwise(b,()=>a.data[0][0]);
+          if(isScalar(b)&&isStrCell(b.data[0][0])&&!isScalar(a)) return elementwise(a,()=>b.data[0][0]);
+          return broadcastBinOp(a,b,(x,y)=>x*y);
+        }
+        const a=evalNode(node.l,table,warnings), b=evalNode(node.r,table,warnings);
+        const ops={'+':(x,y)=>x+y,'-':(x,y)=>x-y,'/':(x,y)=>x/y,'==':(x,y)=>x===y?1:0,'~=':(x,y)=>x!==y?1:0,'<':(x,y)=>x<y?1:0,'>':(x,y)=>x>y?1:0,'<=':(x,y)=>x<=y?1:0,'>=':(x,y)=>x>=y?1:0};
+        return broadcastBinOp(a,b,ops[node.op]);
+      }
+      case 'call': {
+        if(node.target.type==='ident'){
+          const name=node.target.name;
+          if(FUNCS.has(name)){
+            const args=node.args.map(a=>evalNode(a,table,warnings));
+            switch(name){
+              case 'ones': return onesFn(args[0].data[0][0], args[1]?args[1].data[0][0]:args[0].data[0][0], 1);
+              case 'zeros': return onesFn(args[0].data[0][0], args[1]?args[1].data[0][0]:args[0].data[0][0], 0);
+              case 'repmat': return repmatFn(args[0], args[1].data[0][0], args[2].data[0][0]);
+              case 'length': return lengthFn(args[0]);
+              case 'round': return elementwise(args[0], Math.round);
+              case 'rem': return broadcastBinOp(args[0],args[1],(x,y)=>x-y*Math.trunc(x/y));
+              case 'mod': return broadcastBinOp(args[0],args[1],(x,y)=>((x%y)+y)%y);
+              case 'abs': return elementwise(args[0], Math.abs);
+              case 'sqrt': return elementwise(args[0], Math.sqrt);
+              case 'find': return {special:'find', src:args[0]};
+              case 'fopen': return mkScalar(1);
+              case 'fprintf': return mkScalar(0);
+              case 'fclose': return mkScalar(0);
+            }
+          }
+          const m=table[name];
+          if(!m){ warnings.push('index of undefined var: '+name); return mkScalar(0); }
+          const idxArgs=node.args.map(a=>evalNode(a,table,warnings));
+          if(idxArgs.length===1){
+            const idxm=idxArgs[0];
+            if(isScalar(idxm)) return mkScalar(linIndex(m, idxm.data[0][0]));
+            const flatIdx=[]; idxm.data.forEach(row=>row.forEach(v=>flatIdx.push(v)));
+            return mkRow(flatIdx.map(g=>linIndex(m,g)));
+          }
+          return mkScalar(0);
+        }
+        return mkScalar(0);
+      }
+      default: throw new Error('unknown node '+node.type);
+    }
+  }
+
+  function stripComment(line){
+    let inStr=false;
+    for(let i=0;i<line.length;i++){ if(line[i]==="'") inStr=!inStr; if(line[i]==='%'&&!inStr) return line.slice(0,i); }
+    return line;
+  }
+
+  function runPreamble(src){
+    const table={}, warnings=[];
+    for(let rawLine of src.split('\n')){
+      const line=stripComment(rawLine).trim();
+      if(!line) continue;
+      if(/^for\b/.test(line)) break;
+      if(/^(function|switch|case|end|while|if|else|elseif)\b/.test(line)) continue;
+      for(const stmt of line.split(';').map(s=>s.trim()).filter(Boolean)){
+        try{
+          let m;
+          if((m=stmt.match(/^\[\s*([A-Za-z_]\w*)\s*,\s*([A-Za-z_]\w*)\s*\]\s*=\s*(.+)$/))){
+            const [,id1,id2,rhs]=m;
+            const res=evalNode(parseExprTokens(tokenize(rhs)), table, warnings);
+            if(res && res.special==='find'){
+              const s2=res.src; const rowIdx=[],colIdx=[];
+              for(let r=0;r<s2.rows;r++) for(let c=0;c<s2.cols;c++) if(s2.data[r][c]){ rowIdx.push(r+1); colIdx.push(c+1); }
+              table[id1]=mkRow(rowIdx.length?rowIdx:[0]); table[id2]=mkRow(colIdx.length?colIdx:[0]);
+            }
+            continue;
+          }
+          if((m=stmt.match(/^([A-Za-z_]\w*)\s*\(([^=]*)\)\s*=\s*(.+)$/)) && !FUNCS.has(m[1])){
+            const [,name,idxExpr,rhs]=m;
+            if(!(name in table)){ warnings.push('indexed-assign to undefined var '+name); continue; }
+            const idxVal=evalNode(parseExprTokens(tokenize(idxExpr)), table, warnings);
+            const rhsVal=evalNode(parseExprTokens(tokenize(rhs)), table, warnings);
+            const flatIdx=[]; idxVal.data.forEach(row=>row.forEach(v=>flatIdx.push(v)));
+            const flatVals=[]; rhsVal.data.forEach(row=>row.forEach(v=>flatVals.push(v)));
+            flatIdx.forEach((g,k)=>linIndexSet(table[name], g, flatVals[Math.min(k,flatVals.length-1)]));
+            continue;
+          }
+          if((m=stmt.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/))){
+            const [,name,rhs]=m;
+            const val=evalNode(parseExprTokens(tokenize(rhs)), table, warnings);
+            if(val && val.special){ warnings.push('unsupported bare find() for '+name); continue; }
+            table[name]=val; continue;
+          }
+        }catch(e){ warnings.push('parse fail: "'+stmt+'" :: '+e.message); }
+      }
+    }
+    return {table, warnings};
+  }
+
+  // ============================================================
+  // 2. 기하 생성 (group_setting.m / polygon_setting.m / Main_linescan.m 로직 재현)
+  // ============================================================
+  function gv(table,name,g,dflt){ if(!(name in table)) return dflt; return linIndex(table[name], g); }
+
+  function detectKind(table){
+    if('RN' in table && 'LL' in table && 'SL' in table) return 'rect';
+    if('LN' in table || 'PH' in table) return 'polygon';
+    return 'unknown';
+  }
+
+  function buildPolygonCells(table){
+    const GN=table.GN.data[0][0];
+    const hasLN='LN' in table;
+    const cells=[];
+    for(let g=1; g<=GN; g++){
+      const S=String(gv(table,'s',g,'R')), L=String(gv(table,'l',g,'D'));
+      const dsg=gv(table,'ds',g, gv(table,'SPx',g,1))/1000;
+      const dlg=gv(table,'dl',g, gv(table,'SPy',g,1))/1000;
+      let PWg=gv(table,'PW',g,1.2), PHg=gv(table,'PH',g,1.2), LNg;
+      if(hasLN){ LNg=gv(table,'LN',g,1); }
+      else { let E=Math.round((PHg*1000)/(gv(table,'dl',g,gv(table,'SPy',g,1)))); LNg=(E%2===0)?E-1:E; }
+      const PNg=LNg*2; let dd1,dd2;
+      if(S==='U'||S==='D'){ PWg=(LNg-1)*dlg; dd1=PWg; dd2=PHg; } else { PHg=(LNg-1)*dlg; dd1=PHg; dd2=PWg; }
+      const GW=PWg, GH=PHg;
+      const GTXg=gv(table,'GTX',g,0), GTYg=gv(table,'GTY',g,0);
+      const GCX=GTXg-GW/2, GCY=GTYg-GH/2, PCX=GCX, PCY=GCY;
+      const XX=[GTXg-GW, GTXg], YY=[GTYg-GH, GTYg];
+      let FPX,FPY,d,PXX,PYY;
+      if(S==='U'){ if(L==='R'){FPX=XX[0];FPY=YY[0];d=dlg;} else {FPX=XX[1];FPY=YY[0];d=-dlg;} PXX=PCX; PYY=FPY; }
+      else if(S==='D'){ if(L==='R'){FPX=XX[0];FPY=YY[1];d=dlg;} else {FPX=XX[1];FPY=YY[1];d=-dlg;} PXX=PCX; PYY=FPY; }
+      else if(S==='R'){ if(L==='U'){FPX=XX[0];FPY=YY[0];d=dlg;} else {FPX=XX[0];FPY=YY[1];d=-dlg;} PXX=FPX; PYY=PCY; }
+      else { if(L==='U'){FPX=XX[1];FPY=YY[0];d=dlg;} else {FPX=XX[1];FPY=YY[1];d=-dlg;} PXX=FPX; PYY=PCY; }
+      let PX=FPX, PY=FPY; const pts=new Array(PNg);
+      for(let p=0;p<PNg;p++){
+        pts[p]=[PX,PY];
+        if(S==='U'||S==='D'){
+          if(PY===PYY){ if(PY===YY[0]) PY=YY[1]; else if(PY===YY[1]) PY=YY[0]; } else PYY=PY;
+          if(PX===PXX){ PX=PX+d; } else PXX=PX;
+        } else {
+          if(PX===PXX){ if(PX===XX[0]) PX=XX[1]; else if(PX===XX[1]) PX=XX[0]; } else PXX=PX;
+          if(PY===PYY){ PY=PY+d; } else PYY=PY;
+        }
+      }
+      cells.push({g,kind:'polygon',GCX,GCY,GW,GH,pts,SSraw:0});
+    }
+    return cells;
+  }
+
+  function buildRectCells(table, warnings){
+    const GN=table.GN.data[0][0];
+    const cells=[];
+    let rhWarned=false;
+    for(let g=1; g<=GN; g++){
+      const S=String(gv(table,'s',g,'R')), L=String(gv(table,'l',g,'D'));
+      const dlg=gv(table,'dl',g, gv(table,'ds',g,1));
+      const LLg=gv(table,'LL',g,1), SLg=gv(table,'SL',g,1), RNg=Math.round(gv(table,'RN',g,1));
+      const MW=dlg*(RNg-1)/1000;
+      let GW,GH,RW,RH;
+      if(L==='R'||L==='L'){ GW=LLg+MW; GH=SLg; RW=LLg; RH=SLg; }
+      else if(L==='U'){ GH=SLg+MW; GW=LLg; RW=SLg; RH=LLg; }
+      else { GH=SLg+MW; GW=LLg; RW=LLg; RH=SLg; if(!rhWarned){ warnings.push("linescan 'D' 케이스: 원본 스크립트에 RH 정의 누락(버그로 보임) — SL 값으로 대체함"); rhWarned=true; } }
+      const GTXg=gv(table,'GTX',g,0), GTYg=gv(table,'GTY',g,0);
+      let GCX,GCY,dx,dy;
+      if(S==='U'){ GCX=GTXg-GW/2; GCY=GTYg-GH/2; dy=0; }
+      else if(S==='D'){ GCX=GTXg+GW/2-MW; GCY=GTYg-GH/2; dy=0; }
+      else if(S==='R'){ GCX=GTXg-GW/2; GCY=GTYg+GH/2-MW; dx=0; }
+      else { GCX=GTXg-GW/2; GCY=GTYg-GH/2; dx=0; }
+      let FRX,FRY;
+      if(L==='R'){ dx=dlg; FRY=GCY; FRX=(S==='U')?(GTXg-MW-LLg/2):(GTXg-MW+LLg/2); }
+      else if(L==='L'){ dx=-dlg; FRY=GCY; FRX=(S==='U')?(GTXg-LLg/2):(GTXg+LLg/2); }
+      else if(L==='U'){ dy=dlg; FRX=GCX; FRY=(S==='R')?(GTYg-MW+LLg/2):(GTYg-MW-LLg/2); }
+      else { dy=-dlg; FRX=GCX; FRY=(S==='R')?(GTYg+LLg/2):(GTYg-LLg/2); }
+      dx=dx===undefined?0:dx; dy=dy===undefined?0:dy;
+      const pts=new Array(RNg), rectSize={w:RW,h:RH};
+      for(let r=1;r<=RNg;r++){
+        pts[r-1]=[ FRX+dx*(r-1)/1000, FRY+dy*(r-1)/1000 ];
+      }
+      cells.push({g,kind:'rects',GCX,GCY,GW,GH,pts,rectSize,SSraw:0});
+    }
+    return cells;
+  }
+
+  // ============================================================
+  // 3. 전체 파이프라인: 소스 문자열 -> cells + timing + colors
+  // ============================================================
+  let state = null;
+
+  function buildFromSource(src, label){
+    const {table, warnings} = runPreamble(src);
+    const kind = detectKind(table);
+    if(kind==='unknown'){
+      warnings.push('스캔 타입을 인식하지 못했습니다(LN/PH 또는 RN/LL/SL 변수 없음). group_setting.m, polygon_setting.m 같은 보조 스크립트가 아니라 Main 스크립트를 올려주십시오.');
+    }
+    const RR = table.RR? table.RR.data[0][0] : 30;
+    let cells;
+    if(kind==='rect') cells = buildRectCells(table, warnings);
+    else cells = buildPolygonCells(table, warnings);
+
+    // speed(mm/s) 계산: ds(or SPx) 존재하는 셀별로. JumpSpeed=ScanSpeed 가정(모든 샘플 파일 동일 패턴).
+    const GN = table.GN? table.GN.data[0][0] : cells.length;
+    for(let g=1; g<=GN; g++){
+      const dsg = gv(table,'ds',g, gv(table,'SPx',g,1));
+      cells[g-1].SS = RR*dsg; // RR[kHz]*ds[um]/1000 = SS[m/s]; *1000 for mm/s cancels -> RR*ds
+      cells[g-1].JS = cells[g-1].SS;
+    }
+
+    if(cells.length===0){ warnings.push('cell을 하나도 생성하지 못했습니다.'); }
+    return { table, warnings, kind, cells, GN };
+  }
+
+  function finalizeState(built, label){
+    const cells = built.cells;
+    // bounds
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    cells.forEach(c=>c.pts.forEach(([x,y])=>{ if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; }));
+    if(!isFinite(minX)){ minX=0;maxX=1;minY=0;maxY=1; }
+
+    // color mapping
+    let ssMin=Infinity, ssMax=-Infinity;
+    cells.forEach(c=>{ if(c.SS<ssMin) ssMin=c.SS; if(c.SS>ssMax) ssMax=c.SS; });
+    const stops=[[37,99,235],[14,165,233],[245,158,11]];
+    function colorForSpeed(v){
+      const t=(ssMax>ssMin)?(v-ssMin)/(ssMax-ssMin):0.5;
+      const seg=t<0.5?0:1, lt=t<0.5?t/0.5:(t-0.5)/0.5;
+      const a=stops[seg], b=stops[seg+1];
+      return `rgb(${Math.round(a[0]+(b[0]-a[0])*lt)},${Math.round(a[1]+(b[1]-a[1])*lt)},${Math.round(a[2]+(b[2]-a[2])*lt)})`;
+    }
+    cells.forEach(c=>{ c.color=colorForSpeed(c.SS); });
+
+    // timing: distance/speed for consecutive points, + jump between cells
+    function dist(a,b){ return Math.hypot(b[0]-a[0], b[1]-a[1]); }
+    function polyLen(pts){ let d=0; for(let k=1;k<pts.length;k++) d+=dist(pts[k-1],pts[k]); return d; }
+    let t=0;
+    cells.forEach((c,idx)=>{
+      if(idx>0){
+        const prev=cells[idx-1].pts[cells[idx-1].pts.length-1];
+        const jd = c.jumpPath ? polyLen(c.jumpPath) : dist(prev, c.pts[0]);
+        c.jumpDur = c.JS>0 ? jd/c.JS : 0;
+        c.jumpStart = t; t += c.jumpDur;
+      } else { c.jumpDur=0; c.jumpStart=t; }
+      c.markStart=t;
+      const cum=new Array(c.pts.length).fill(0);
+      for(let k=1;k<c.pts.length;k++) cum[k]=cum[k-1] + (c.SS>0 ? dist(c.pts[k-1],c.pts[k])/c.SS : 0);
+      c.cum=cum; t += cum[cum.length-1]; c.markEnd=t;
+    });
+    const totalDuration = Math.max(t, 1e-6);
+
+    return { ...built, minX,maxX,minY,maxY, ssMin, ssMax, totalDuration, label };
+  }
+
+  // ============================================================
+  // 4. 렌더링
+  // ============================================================
+  const baseC=document.getElementById('base'), ovC=document.getElementById('overlay');
+  const bctx=baseC.getContext('2d'), octx=ovC.getContext('2d');
+  const RULER=26;
+  let DPR=1, DISP=760;
+  let scale=1, offX=0, offY=0; // fit-to-bounds base transform (mm -> pre-zoom px, inside draw area)
+  let zoom=1, panX=0, panY=0;
+
+  function drawAreaSize(){ return DISP-RULER; }
+
+  function baseXY(x,y){ return [ offX + x*scale, drawAreaSize() - (offY + y*scale) ]; }
+  function toScreen(x,y){
+    const [bx,by]=baseXY(x,y);
+    return [ RULER + bx*zoom + panX, RULER + by*zoom + panY ];
+  }
+  function invScreenX(sx){ return (sx - RULER - panX)/zoom; } // -> base px (pre mm)
+  function invScreenY(sy){ return (sy - RULER - panY)/zoom; }
+
+  function resizeCanvases(){
+    const rect=baseC.getBoundingClientRect();
+    if(rect.width===0) return; // hidden tab — resized properly when it becomes visible
+    DISP=rect.width; DPR=window.devicePixelRatio||1;
+    [baseC,ovC].forEach(c=>{ c.width=DISP*DPR; c.height=DISP*DPR; });
+    bctx.setTransform(DPR,0,0,DPR,0,0); octx.setTransform(DPR,0,0,DPR,0,0);
+    fitBounds();
+  }
+
+  function fitBounds(){
+    if(!state) return;
+    const spanX=(state.maxX-state.minX)||1, spanY=(state.maxY-state.minY)||1;
+    const D=drawAreaSize(), pad=D*0.06;
+    scale = Math.min((D-pad*2)/spanX, (D-pad*2)/spanY);
+    offX = (D - spanX*scale)/2 - state.minX*scale;
+    offY = (D - spanY*scale)/2 - state.minY*scale;
+  }
+
+  function niceStep(target){
+    const cands=[0.05,0.1,0.2,0.5,1,2,5,10,20,50,100];
+    let best=cands[0], bestDiff=Infinity;
+    for(const c of cands){ const diff=Math.abs(target-c); if(diff<bestDiff){ bestDiff=diff; best=c; } }
+    return best;
+  }
+
+  function drawRuler(){
+    bctx.save();
+    bctx.fillStyle='#fff'; bctx.fillRect(0,0,DISP,RULER); bctx.fillRect(0,0,RULER,DISP);
+    bctx.strokeStyle='#e2e3e8'; bctx.lineWidth=1;
+    bctx.beginPath(); bctx.moveTo(0,RULER+0.5); bctx.lineTo(DISP,RULER+0.5); bctx.moveTo(RULER+0.5,0); bctx.lineTo(RULER+0.5,DISP); bctx.stroke();
+
+    const D=drawAreaSize();
+    // 화면(px) -> mm 역변환으로 현재 보이는 mm 범위 계산
+    const mmLeft = ( invScreenX(RULER) - offX ) / scale;
+    const mmRight = ( invScreenX(DISP) - offX ) / scale;
+    const mmTop = ( (D - invScreenY(RULER)) - offY ) / scale;   // y화면 위쪽 = mm 큰값
+    const mmBottom = ( (D - invScreenY(DISP)) - offY ) / scale;
+    const visSpanX = Math.abs(mmRight-mmLeft), visSpanY=Math.abs(mmTop-mmBottom);
+    const stepX = niceStep(visSpanX/7), stepY = niceStep(visSpanY/7);
+
+    bctx.fillStyle='#9aa0ab'; bctx.font='10px '+getComputedStyle(document.body).fontFamily;
+    bctx.textAlign='center'; bctx.textBaseline='top';
+    const startX=Math.floor(Math.min(mmLeft,mmRight)/stepX)*stepX;
+    for(let v=startX; v<=Math.max(mmLeft,mmRight)+1e-6; v+=stepX){
+      const [sx] = toScreen(v, mmBottom);
+      if(sx<RULER || sx>DISP) continue;
+      bctx.strokeStyle='#f5f5f7'; bctx.beginPath(); bctx.moveTo(sx,RULER); bctx.lineTo(sx,DISP); bctx.stroke();
+      bctx.fillText(v.toFixed(Math.max(0,-Math.floor(Math.log10(stepX)))+(stepX<1?1:0)), sx, 4);
+    }
+    bctx.textAlign='left'; bctx.textBaseline='middle';
+    const startY=Math.floor(Math.min(mmTop,mmBottom)/stepY)*stepY;
+    for(let v=startY; v<=Math.max(mmTop,mmBottom)+1e-6; v+=stepY){
+      const [,sy] = toScreen(mmLeft, v);
+      if(sy<RULER || sy>DISP) continue;
+      bctx.strokeStyle='#f5f5f7'; bctx.beginPath(); bctx.moveTo(RULER,sy); bctx.lineTo(DISP,sy); bctx.stroke();
+      bctx.save(); bctx.translate(3,sy); bctx.fillText(v.toFixed(Math.max(0,-Math.floor(Math.log10(stepY)))+(stepY<1?1:0)), 0, 0); bctx.restore();
+    }
+    bctx.restore();
+  }
+
+  function drawCellBoxes(){
+    bctx.save();
+    bctx.strokeStyle='#9aa0ad'; bctx.lineWidth=1; bctx.setLineDash([4,3]);
+    state.cells.forEach(c=>{
+      const [x0,y0]=toScreen(c.GCX-c.GW/2, c.GCY+c.GH/2);
+      const [x1,y1]=toScreen(c.GCX+c.GW/2, c.GCY-c.GH/2);
+      bctx.strokeRect(x0,y0, x1-x0, y1-y0);
+    });
+    bctx.restore();
+  }
+
+  function clearBase(){ bctx.clearRect(0,0,DISP,DISP); drawRuler(); drawCellBoxes(); }
+
+  function colorAlpha(rgbStr, a){
+    const m=rgbStr.match(/rgb\((\d+),(\d+),(\d+)\)/);
+    return m? `rgba(${m[1]},${m[2]},${m[3]},${a})` : rgbStr;
+  }
+
+  function drawCellFull(ctx, c){
+    if(c.kind==='polygon'){
+      ctx.strokeStyle=c.color; ctx.lineWidth=Math.max(0.7, 1.1*Math.min(2,zoom));
+      ctx.beginPath();
+      const [x0,y0]=toScreen(c.pts[0][0],c.pts[0][1]); ctx.moveTo(x0,y0);
+      for(let k=1;k<c.pts.length;k++){ const [x,y]=toScreen(c.pts[k][0],c.pts[k][1]); ctx.lineTo(x,y); }
+      ctx.stroke();
+    } else {
+      ctx.fillStyle=colorAlpha(c.color,0.32);
+      ctx.strokeStyle=colorAlpha(c.color,0.6); ctx.lineWidth=0.5;
+      const w=c.rectSize.w, h=c.rectSize.h;
+      for(let k=0;k<c.pts.length;k++){
+        const [cx,cy]=c.pts[k];
+        const [x0,y0]=toScreen(cx-w/2, cy+h/2), [x1,y1]=toScreen(cx+w/2, cy-h/2);
+        ctx.fillRect(x0,y0,x1-x0,y1-y0);
+      }
+      ctx.beginPath(); ctx.strokeStyle=colorAlpha(c.color,0.7); ctx.lineWidth=0.6;
+      const [px0,py0]=toScreen(c.pts[0][0],c.pts[0][1]); ctx.moveTo(px0,py0);
+      for(let k=1;k<c.pts.length;k++){ const [x,y]=toScreen(c.pts[k][0],c.pts[k][1]); ctx.lineTo(x,y); }
+      ctx.stroke();
+    }
+  }
+  // 점프 경로(직선 또는 도형 경계를 따르는 다점 경로) 관련 공용 유틸
+  function jumpInfo(prevPt, c){
+    const wp = c.jumpPath || [prevPt, c.pts[0]];
+    const cum=[0];
+    for(let i=1;i<wp.length;i++) cum.push(cum[i-1]+Math.hypot(wp[i][0]-wp[i-1][0], wp[i][1]-wp[i-1][1]));
+    return {wp, cum, total:cum[cum.length-1]};
+  }
+  function drawJumpFullPath(ctx, prevPt, c, color, lw){
+    const {wp}=jumpInfo(prevPt, c);
+    ctx.strokeStyle=color; ctx.lineWidth=lw;
+    ctx.beginPath();
+    const [x0,y0]=toScreen(wp[0][0],wp[0][1]); ctx.moveTo(x0,y0);
+    for(let i=1;i<wp.length;i++){ const [x,y]=toScreen(wp[i][0],wp[i][1]); ctx.lineTo(x,y); }
+    ctx.stroke();
+  }
+  function drawJumpUpToFrac(ctx, prevPt, c, frac, color, lw){
+    const {wp,cum,total}=jumpInfo(prevPt, c);
+    const target = total*Math.max(0,Math.min(1,frac));
+    let k=0; while(k<cum.length-2 && cum[k+1]<target) k++;
+    const segStart=cum[k], segEnd=cum[k+1];
+    const segFrac = segEnd>segStart? (target-segStart)/(segEnd-segStart) : 1;
+    const curX = wp[k][0]+(wp[k+1][0]-wp[k][0])*segFrac;
+    const curY = wp[k][1]+(wp[k+1][1]-wp[k][1])*segFrac;
+    ctx.strokeStyle=color; ctx.lineWidth=lw;
+    ctx.beginPath();
+    const [sx0,sy0]=toScreen(wp[0][0],wp[0][1]); ctx.moveTo(sx0,sy0);
+    for(let i=1;i<=k;i++){ const [sx,sy]=toScreen(wp[i][0],wp[i][1]); ctx.lineTo(sx,sy); }
+    const [cx,cy]=toScreen(curX,curY); ctx.lineTo(cx,cy);
+    ctx.stroke();
+    return {screen:[cx,cy], mm:[curX,curY]};
+  }
+
+  function drawJumpFull(ctx, c, idx){
+    if(idx===0 || !document.getElementById('chk-jump').checked) return;
+    const prev = state.cells[idx-1].pts[state.cells[idx-1].pts.length-1];
+    ctx.save();
+    drawJumpFullPath(ctx, prev, c, colorAlpha(c.color,0.55), Math.max(0.5, 0.8*Math.min(2,zoom)));
+    ctx.restore();
+  }
+
+  let elapsed=0, playing=false, rate=1, committed=-1, lastTs=null;
+  let lastIdxSeen=-1;
+
+  function findCellIndex(tt){
+    const cells=state.cells;
+    if(tt<=0) return 0;
+    if(tt>=state.totalDuration) return cells.length-1;
+    for(let i=0;i<cells.length;i++) if(tt < cells[i].markEnd) return i;
+    return cells.length-1;
+  }
+
+  function rebuildBaseUpTo(idxExclusive){
+    clearBase();
+    committed=-1;
+    while(committed < idxExclusive-1){ committed++; drawJumpFull(bctx, state.cells[committed], committed); drawCellFull(bctx, state.cells[committed]); }
+  }
+
+  function render(force){
+    if(!state) return;
+    if(baseC.getBoundingClientRect().width===0) return; // hidden tab
+    const cells=state.cells;
+    const idx=findCellIndex(elapsed);
+    if(force || committed>idx) rebuildBaseUpTo(idx);
+    while(committed < idx-1){ committed++; drawJumpFull(bctx, cells[committed], committed); drawCellFull(bctx, cells[committed]); }
+
+    const c=cells[idx];
+    octx.clearRect(0,0,DISP,DISP);
+    let beamPt, rawMM;
+
+    if(elapsed < c.markStart){
+      const frac = c.jumpDur>0 ? Math.min(1,(elapsed-c.jumpStart)/c.jumpDur) : 1;
+      const prevPt = idx>0 ? cells[idx-1].pts[cells[idx-1].pts.length-1] : c.pts[0];
+      if(document.getElementById('chk-jump').checked){
+        octx.save();
+        const r=drawJumpUpToFrac(octx, prevPt, c, frac, colorAlpha(c.color,0.55), 0.8);
+        beamPt=r.screen; rawMM=r.mm;
+        octx.restore();
+      } else { beamPt=toScreen(c.pts[0][0],c.pts[0][1]); rawMM=c.pts[0]; }
+    } else {
+      const rel=elapsed-c.markStart;
+      let k=0; while(k<c.cum.length-1 && c.cum[k+1]<rel) k++;
+      const segStart=c.cum[k], segEnd=c.cum[Math.min(k+1,c.cum.length-1)];
+      const segFrac = segEnd>segStart ? Math.min(1,(rel-segStart)/(segEnd-segStart)) : 1;
+      const p0=c.pts[k], p1=c.pts[Math.min(k+1,c.pts.length-1)];
+      const mmX=p0[0]+(p1[0]-p0[0])*segFrac, mmY=p0[1]+(p1[1]-p0[1])*segFrac;
+      rawMM=[mmX,mmY];
+
+      // 이 cell로 들어오는 점프 구간은 이 cell이 완전히 끝나야 base에 확정되므로,
+      // 마킹이 진행되는 동안에도 끊겨 보이지 않도록 overlay에 항상 같이 그려준다.
+      if(idx>0 && document.getElementById('chk-jump').checked){
+        const prevLast = cells[idx-1].pts[cells[idx-1].pts.length-1];
+        drawJumpFullPath(octx, prevLast, c, colorAlpha(c.color,0.55), 0.8);
+      }
+
+      if(c.kind==='polygon'){
+        octx.strokeStyle=c.color; octx.lineWidth=1.1;
+        octx.beginPath();
+        const [sx0,sy0]=toScreen(c.pts[0][0],c.pts[0][1]); octx.moveTo(sx0,sy0);
+        for(let j=1;j<=k;j++){ const [sx,sy]=toScreen(c.pts[j][0],c.pts[j][1]); octx.lineTo(sx,sy); }
+        const [bx,by]=toScreen(mmX,mmY); octx.lineTo(bx,by);
+        octx.stroke();
+      } else {
+        octx.fillStyle=colorAlpha(c.color,0.32);
+        const w=c.rectSize.w, h=c.rectSize.h;
+        for(let j=0;j<=k;j++){
+          const [cx,cy]=c.pts[j];
+          const [x0,y0]=toScreen(cx-w/2, cy+h/2), [x1,y1]=toScreen(cx+w/2, cy-h/2);
+          octx.fillRect(x0,y0,x1-x0,y1-y0);
+        }
+      }
+      beamPt=toScreen(mmX,mmY);
+    }
+
+    octx.save();
+    octx.fillStyle='rgba(124,58,237,0.16)'; octx.beginPath(); octx.arc(beamPt[0],beamPt[1],7,0,Math.PI*2); octx.fill();
+    octx.fillStyle='#7c3aed'; octx.beginPath(); octx.arc(beamPt[0],beamPt[1],2.6,0,Math.PI*2); octx.fill();
+    octx.restore();
+
+    document.getElementById('hud-cell').textContent = `${c.g} / ${state.GN}`;
+    document.getElementById('hud-x').textContent = rawMM[0].toFixed(3);
+    document.getElementById('hud-y').textContent = rawMM[1].toFixed(3);
+    document.getElementById('hud-speed').textContent = ((elapsed<c.markStart? c.JS : c.SS)/1000).toFixed(3)+' m/s';
+    document.getElementById('hud-time').textContent = `${elapsed.toFixed(3)}s / ${state.totalDuration.toFixed(2)}s`;
+    document.getElementById('hud-zoom').textContent = zoom.toFixed(1)+'×';
+
+    const scrub=document.getElementById('scrub');
+    if(document.activeElement!==scrub) scrub.value=Math.round((elapsed/state.totalDuration)*1000);
+
+    if(playing && document.getElementById('chk-autostop').checked && idx!==lastIdxSeen && lastIdxSeen!==-1){
+      elapsed = c.jumpStart; playing=false; setPlayBtn(); render(false); 
+    }
+    lastIdxSeen=idx;
+  }
+
+  function setPlayBtn(){ document.getElementById('btn-play').textContent = playing?'일시정지':'재생'; }
+
+  function frame(ts){
+    if(playing && state){
+      if(lastTs===null) lastTs=ts;
+      const dt=(ts-lastTs)/1000; lastTs=ts;
+      elapsed=Math.min(state.totalDuration, elapsed+dt*rate);
+      if(elapsed>=state.totalDuration){ playing=false; setPlayBtn(); }
+      render(false);
+    }
+    if(dualPlaying){
+      if(dualLastTs===null) dualLastTs=ts;
+      const dt=(ts-dualLastTs)/1000; dualLastTs=ts;
+      const maxDur=Math.max(smartRouteState? smartRouteState.totalDuration:0, naiveRouteState? naiveRouteState.totalDuration:0);
+      dualElapsed=Math.min(maxDur, dualElapsed+dt*rate);
+      renderDual();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ============================================================
+  // 5. 컨트롤 바인딩
+  // ============================================================
+  const RMIN=0.02, RMAX=200;
+  function sliderToRate(sv){ return RMIN*Math.pow(RMAX/RMIN, sv/1000); }
+  document.getElementById('rate').addEventListener('input', e=>{
+    rate=sliderToRate(+e.target.value);
+    document.getElementById('rate-val').textContent = (rate<1? rate.toFixed(2) : rate.toFixed(1))+'×';
+  });
+  document.getElementById('rate').dispatchEvent(new Event('input'));
+
+  document.getElementById('btn-play').addEventListener('click', ()=>{
+    if(!state) return;
+    if(elapsed>=state.totalDuration) elapsed=0;
+    playing=!playing; lastTs=null; lastIdxSeen=findCellIndex(elapsed); setPlayBtn();
+  });
+  document.getElementById('btn-reset').addEventListener('click', ()=>{ playing=false; setPlayBtn(); elapsed=0; render(true); });
+  document.getElementById('btn-prev').addEventListener('click', ()=>{
+    if(!state) return; playing=false; setPlayBtn();
+    const idx=Math.max(0, findCellIndex(elapsed)-1); elapsed=state.cells[idx].jumpStart; render(true);
+  });
+  document.getElementById('btn-next').addEventListener('click', ()=>{
+    if(!state) return; playing=false; setPlayBtn();
+    const idx=Math.min(state.cells.length-1, findCellIndex(elapsed)+1); elapsed=state.cells[idx].jumpStart; render(true);
+  });
+  document.getElementById('scrub').addEventListener('input', e=>{ if(!state) return; elapsed=(+e.target.value/1000)*state.totalDuration; render(false); });
+  document.getElementById('chk-jump').addEventListener('change', ()=>render(true));
+  document.getElementById('chk-autostop').addEventListener('change', ()=>{ lastIdxSeen=state?findCellIndex(elapsed):-1; });
+
+  document.getElementById('btn-zoomin').addEventListener('click', ()=>zoomAt(drawAreaSize()/2+RULER, drawAreaSize()/2+RULER, 1.3));
+  document.getElementById('btn-zoomout').addEventListener('click', ()=>zoomAt(drawAreaSize()/2+RULER, drawAreaSize()/2+RULER, 1/1.3));
+  document.getElementById('btn-fitall').addEventListener('click', ()=>{ zoom=1; panX=0; panY=0; render(true); });
+  document.getElementById('btn-fitcell').addEventListener('click', ()=>{
+    if(!state) return;
+    const c=state.cells[findCellIndex(elapsed)];
+    const D=drawAreaSize();
+    const [bx,by]=baseXY(c.GCX, c.GCY);
+    const targetZoom=Math.min( (D*0.8)/(c.GW*scale||1), (D*0.8)/(c.GH*scale||1) );
+    zoom=Math.max(0.5, Math.min(80, targetZoom));
+    panX = D/2 - bx*zoom; panY = D/2 - by*zoom;
+    render(true);
+  });
+
+  function zoomAt(sx, sy, factor){
+    const preX=invScreenX(sx), preY=invScreenY(sy);
+    zoom=Math.max(0.4, Math.min(120, zoom*factor));
+    panX = (sx-RULER) - preX*zoom;
+    panY = (sy-RULER) - preY*zoom;
+    render(true);
+  }
+
+  const interact=document.getElementById('interact');
+  interact.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const rect=baseC.getBoundingClientRect();
+    const sx=(e.clientX-rect.left)*(DISP/rect.width), sy=(e.clientY-rect.top)*(DISP/rect.height);
+    zoomAt(sx, sy, e.deltaY<0?1.15:1/1.15);
+  }, {passive:false});
+  let dragging=false, dragSX=0, dragSY=0, dragPanX=0, dragPanY=0;
+  interact.addEventListener('pointerdown', e=>{ dragging=true; interact.classList.add('dragging'); dragSX=e.clientX; dragSY=e.clientY; dragPanX=panX; dragPanY=panY; interact.setPointerCapture(e.pointerId); });
+  interact.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const rect=baseC.getBoundingClientRect();
+    const kx=DISP/rect.width, ky=DISP/rect.height;
+    panX = dragPanX + (e.clientX-dragSX)*kx;
+    panY = dragPanY + (e.clientY-dragSY)*ky;
+    render(true);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(evt=>interact.addEventListener(evt, ()=>{ dragging=false; interact.classList.remove('dragging'); }));
+
+  window.addEventListener('resize', ()=>{ resizeCanvases(); render(true); resizeDrawCanvas(); redrawDrawCanvas(); });
+
+  // ============================================================
+  // 5b. 탭 전환
+  // ============================================================
+  function switchTab(name){
+    document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+    if(name==='view'){ resizeCanvases(); render(true); }
+    if(name==='draw'){ resizeDrawCanvas(); redrawDrawCanvas(); }
+  }
+  document.querySelectorAll('.tabBtn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
+  document.getElementById('btn-back-to-draw').addEventListener('click', ()=>switchTab('draw'));
+
+  // ============================================================
+  // 5c. 드로잉 스튜디오 — 기하 유틸 (marching squares / DP / hatch fill / NN 정렬)
+  // ============================================================
+  function marchingSquares(field, W, H, iso){
+    const segs=[];
+    function interp(x1,y1,v1,x2,y2,v2){ let t=(iso-v1)/(v2-v1); if(!isFinite(t)) t=0.5; t=Math.max(0,Math.min(1,t)); return [x1+(x2-x1)*t, y1+(y2-y1)*t]; }
+    for(let y=0;y<H-1;y++){
+      for(let x=0;x<W-1;x++){
+        const tl=field(x,y), tr=field(x+1,y), br=field(x+1,y+1), bl=field(x,y+1);
+        const c=(tl<iso?1:0)|(tr<iso?2:0)|(br<iso?4:0)|(bl<iso?8:0);
+        if(c===0||c===15) continue;
+        const top=()=>interp(x,y,tl,x+1,y,tr), right=()=>interp(x+1,y,tr,x+1,y+1,br);
+        const bottom=()=>interp(x,y+1,bl,x+1,y+1,br), left=()=>interp(x,y,tl,x,y+1,bl);
+        const add=(a,b)=>segs.push([a,b]);
+        switch(c){
+          case 1: add(left(),top()); break;
+          case 2: add(top(),right()); break;
+          case 3: add(left(),right()); break;
+          case 4: add(right(),bottom()); break;
+          case 5: { const avg=(tl+tr+br+bl)/4; if(avg<iso){ add(top(),right()); add(bottom(),left()); } else { add(left(),top()); add(right(),bottom()); } break; }
+          case 6: add(top(),bottom()); break;
+          case 7: add(left(),bottom()); break;
+          case 8: add(bottom(),left()); break;
+          case 9: add(bottom(),top()); break;
+          case 10: { const avg=(tl+tr+br+bl)/4; if(avg<iso){ add(left(),top()); add(right(),bottom()); } else { add(top(),right()); add(bottom(),left()); } break; }
+          case 11: add(bottom(),right()); break;
+          case 12: add(right(),left()); break;
+          case 13: add(top(),right()); break;
+          case 14: add(top(),left()); break;
+        }
+      }
+    }
+    return segs;
+  }
+  function linkSegmentsToLoops(segs, tol=1e-4){
+    const key=p=>Math.round(p[0]/tol)+','+Math.round(p[1]/tol);
+    const map=new Map();
+    segs.forEach((s,i)=>{ [0,1].forEach(endIdx=>{ const k=key(s[endIdx]); if(!map.has(k)) map.set(k,[]); map.get(k).push({i,endIdx}); }); });
+    const used=new Array(segs.length).fill(false); const loops=[];
+    for(let i=0;i<segs.length;i++){
+      if(used[i]) continue; used[i]=true;
+      const loop=[segs[i][0], segs[i][1]];
+      let guard=0;
+      while(guard++ < segs.length+10){
+        const tailKey=key(loop[loop.length-1]);
+        const cands=map.get(tailKey)||[]; let found=null;
+        for(const cand of cands){ if(used[cand.i]) continue; found=cand; break; }
+        if(!found) break;
+        used[found.i]=true; const s=segs[found.i];
+        loop.push(found.endIdx===0? s[1] : s[0]);
+        if(key(loop[loop.length-1])===key(loop[0])) break;
+      }
+      if(loop.length>=3) loops.push(loop);
+    }
+    return loops;
+  }
+  function extractContours(field,W,H,iso){ return linkSegmentsToLoops(marchingSquares(field,W,H,iso)); }
+  function perpDist(p,a,b){ const dx=b[0]-a[0],dy=b[1]-a[1]; const len2=dx*dx+dy*dy; if(len2===0) return Math.hypot(p[0]-a[0],p[1]-a[1]);
+    let t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/len2; t=Math.max(0,Math.min(1,t));
+    return Math.hypot(p[0]-(a[0]+t*dx), p[1]-(a[1]+t*dy)); }
+  function douglasPeucker(points, epsilon){
+    if(points.length<3) return points.slice();
+    let maxD=0, idx=0;
+    for(let i=1;i<points.length-1;i++){ const d=perpDist(points[i],points[0],points[points.length-1]); if(d>maxD){maxD=d; idx=i;} }
+    if(maxD>epsilon){ const l=douglasPeucker(points.slice(0,idx+1),epsilon), r=douglasPeucker(points.slice(idx),epsilon); return l.slice(0,-1).concat(r); }
+    return [points[0], points[points.length-1]];
+  }
+  // 도형 내부를 채울 때, 전체를 하나의 연속 지그재그로 억지로 이어붙이지 않고
+  // "다음으로 가까운 span과의 거리가 pitch의 gapMult배를 넘으면" 별도 구역으로 끊어서
+  // 여러 개의 작은 채움 조각(sub-region)을 반환한다. 이 조각들은 이후 planRoute가
+  // 각각을 하나의 item으로 보고 최적 순서로 이어붙인다 — "팔 채우고 나와서 몸통 채우고
+  // 다리로 이동" 같은 동선이 자동으로 나오는 원리.
+  function hatchFillSegmented(contours, pitch, angleDeg, gapMult){
+    gapMult = gapMult || 4;
+    angleDeg=angleDeg||0; const rad=angleDeg*Math.PI/180;
+    const cos=Math.cos(-rad), sin=Math.sin(-rad), cos2=Math.cos(rad), sin2=Math.sin(rad);
+    const rot=p=>[p[0]*cos-p[1]*sin, p[0]*sin+p[1]*cos], unrot=p=>[p[0]*cos2-p[1]*sin2, p[0]*sin2+p[1]*cos2];
+    const rc=contours.map(loop=>loop.map(rot));
+    let minY=Infinity,maxY=-Infinity;
+    rc.forEach(loop=>loop.forEach(p=>{ if(p[1]<minY)minY=p[1]; if(p[1]>maxY)maxY=p[1]; }));
+    if(!isFinite(minY)) return [];
+    const edges=[];
+    rc.forEach(loop=>{ for(let i=0;i<loop.length;i++){ const a=loop[i], b=loop[(i+1)%loop.length]; if(a[1]===b[1]) continue; edges.push({y0:Math.min(a[1],b[1]), y1:Math.max(a[1],b[1]), a, b}); } });
+    const rows=[]; const startY=Math.ceil(minY/pitch)*pitch + pitch*0.379; // 스캔라인이 우연히 정점(접점)과 정확히 겹치는 걸 피하기 위한 미세 오프셋
+    for(let y=startY; y<=maxY; y+=pitch){
+      const xs=[];
+      for(const e of edges){ if(y<e.y0 || y>=e.y1) continue; const t=(y-e.a[1])/(e.b[1]-e.a[1]); xs.push(e.a[0]+t*(e.b[0]-e.a[0])); }
+      xs.sort((p,q)=>p-q);
+      // 접선(tangent) 등 부동소수점 오차로 거의 같은 위치에 중복 크로싱이 생기면 하나로 병합
+      const merged=[];
+      const eps = pitch*0.01;
+      for(const x of xs){ if(merged.length && Math.abs(x-merged[merged.length-1])<eps) continue; merged.push(x); }
+      // 그래도 홀수 개면(경계가 스캔라인에 접하는 등 퇴화 케이스) 잘못 짝지어 큰 구간을 만들 위험이
+      // 있으므로, 그 행은 안전하게 건너뛴다 — pitch가 매우 작아 한 줄 정도 빠져도 눈에 띄지 않는다.
+      if(merged.length % 2 !== 0) continue;
+      const spans=[]; for(let i=0;i+1<merged.length;i+=2) spans.push([merged[i],merged[i+1]]);
+      if(spans.length) rows.push({y, spans});
+    }
+    const gapLimit = pitch*gapMult;
+    const subpaths=[];
+    let cur=null, curPath=null;
+    rows.forEach(row=>{
+      const remaining = row.spans.map(sp=>({sp, used:false}));
+      while(remaining.some(r=>!r.used)){
+        let best=-1, bestD=Infinity, bestRev=false;
+        remaining.forEach((r,i)=>{
+          if(r.used) return;
+          if(cur){
+            const d0=Math.hypot(r.sp[0]-cur[0], row.y-cur[1]);
+            const d1=Math.hypot(r.sp[1]-cur[0], row.y-cur[1]);
+            if(d0<bestD){ bestD=d0; best=i; bestRev=false; }
+            if(d1<bestD){ bestD=d1; best=i; bestRev=true; }
+          } else if(best===-1){ best=i; bestRev=false; bestD=0; }
+        });
+        const r=remaining[best]; r.used=true;
+        const [a,b] = bestRev? [r.sp[1],r.sp[0]] : [r.sp[0],r.sp[1]];
+        if(!curPath || bestD>gapLimit){
+          if(curPath && curPath.length) subpaths.push(curPath);
+          curPath=[];
+        }
+        curPath.push(unrot([a,row.y])); curPath.push(unrot([b,row.y]));
+        cur=[b,row.y];
+      }
+    });
+    if(curPath && curPath.length) subpaths.push(curPath);
+    return subpaths;
+  }
+  // 기존 단일-패스 hatchFill(하위 호환/단순 도형용) — 내부적으로 세그먼트를 이어붙여 반환
+  function hatchFill(contours, pitch, angleDeg){
+    const subs = hatchFillSegmented(contours, pitch, angleDeg, Infinity);
+    const pts=[]; subs.forEach(s=>pts.push(...s));
+    return pts;
+  }
+  function greedyOrder(items, startNear){
+    const n=items.length, used=new Array(n).fill(false), order=[]; let cur=startNear||[0,0];
+    for(let k=0;k<n;k++){
+      let best=-1,bestD=Infinity;
+      for(let i=0;i<n;i++){ if(used[i]) continue; const d=Math.hypot(items[i].entry[0]-cur[0], items[i].entry[1]-cur[1]); if(d<bestD){bestD=d;best=i;} }
+      used[best]=true; order.push(best); cur=items[best].exit;
+    }
+    return order;
+  }
+
+  // 전체 도형(items)을 보고 점프 거리 합이 최소가 되는 one-stroke 동선을 계산.
+  // 1) 각 조각을 양방향(정방향/역방향) 다 고려하는 nearest-neighbor로 초기 경로 생성
+  // 2) 2-opt로 구간을 뒤집어보며(방향도 같이 뒤집음) 국소 개선 — 완전한 최적해는 아니지만 실무적으로 충분히 좋은 근사
+  function planRoute(items, startPt){
+    const n=items.length;
+    if(n===0) return [];
+    const dist=(a,b)=>Math.hypot(a[0]-b[0], a[1]-b[1]);
+    const entryOf=t=> t.rev? items[t.idx].exit : items[t.idx].entry;
+    const exitOf =t=> t.rev? items[t.idx].entry : items[t.idx].exit;
+
+    // 1) 방향까지 고려한 greedy nearest-neighbor
+    const used=new Array(n).fill(false); const tour=[]; let cur=startPt||[0,0];
+    for(let k=0;k<n;k++){
+      let best=-1, bestRev=false, bestD=Infinity;
+      for(let i=0;i<n;i++){
+        if(used[i]) continue;
+        const dF=dist(items[i].entry,cur); if(dF<bestD){ bestD=dF; best=i; bestRev=false; }
+        const dR=dist(items[i].exit,cur);  if(dR<bestD){ bestD=dR; best=i; bestRev=true; }
+      }
+      used[best]=true; tour.push({idx:best, rev:bestRev});
+      cur = bestRev? items[best].entry : items[best].exit;
+    }
+
+    // 2) 2-opt (구간 반전 + 방향 반전) 국소 개선, n이 너무 크면 패스 수를 줄여서 성능 보호
+    const maxPasses = n>250 ? 6 : (n>120 ? 14 : 25);
+    let improvedAny=true, pass=0;
+    while(improvedAny && pass<maxPasses){
+      improvedAny=false; pass++;
+      for(let i=0;i<tour.length-1;i++){
+        const prevPt = i===0? (startPt||[0,0]) : exitOf(tour[i-1]);
+        for(let j=i+1;j<tour.length;j++){
+          const afterPt = (j+1<tour.length)? entryOf(tour[j+1]) : null;
+          const curCost = dist(prevPt, entryOf(tour[i])) + (afterPt? dist(exitOf(tour[j]), afterPt) : 0);
+          const newEntryI = exitOf(tour[j]), newExitJ = entryOf(tour[i]);
+          const newCost = dist(prevPt, newEntryI) + (afterPt? dist(newExitJ, afterPt) : 0);
+          if(newCost < curCost - 1e-9){
+            const seg = tour.slice(i,j+1).reverse().map(t=>({idx:t.idx, rev:!t.rev}));
+            tour.splice(i, j-i+1, ...seg);
+            improvedAny=true;
+          }
+        }
+      }
+    }
+    return tour;
+  }
+
+  // 방향 고정 tour(entry->exit만) vs planRoute tour(양방향+2-opt)의 총 이동거리를 비교할 때 공용으로 쓰는 함수
+  function tourDist(items, tour, start){
+    let cur=start, cost=0;
+    tour.forEach(t=>{
+      const it=items[t.idx];
+      const entry = t.rev? it.exit : it.entry, exit = t.rev? it.entry : it.exit;
+      cost += Math.hypot(entry[0]-cur[0], entry[1]-cur[1]);
+      cur=exit;
+    });
+    return cost;
+  }
+
+  let lastRouteStats=null; // {n, naiveCost, smartCost, pct} — 가장 최근 "미리보기 생성" 결과
+
+  // ============================================================
+  // 5d. 드로잉 스튜디오 — 캔버스 / 도형 상태 / 인터랙션
+  // ============================================================
+  let shapes=[], selectedSet=new Set(), currentTool='pen', shapeIdSeq=1;
+  let history=[];
+  let drawingStroke=null, dragStart=null, triClicks=[], moveOrigin=null, lassoPts=null, lastPointerMM=[0,0];
+  function selKey(shapeId,cIdx){ return shapeId+':'+cIdx; }
+  function isSelected(shapeId,cIdx){ return selectedSet.has(selKey(shapeId,cIdx)); }
+  function selectedList(){ return [...selectedSet].map(k=>{ const [sid,ci]=k.split(':'); return {shapeId:+sid, cIdx:+ci}; }); }
+
+  function wsSize(){ return +document.getElementById('ws-size').value || 20; }
+  function snapshotHistory(){ history.push(JSON.stringify(shapes)); if(history.length>60) history.shift(); }
+  function undo(){ if(!history.length) return; shapes=JSON.parse(history.pop()); selectedSet=new Set(); updateSelInfo(); redrawDrawCanvas(); }
+
+  const DRULER=22;
+  let drawZoom=1, drawPanX=0, drawPanY=0;
+  function drawCanvasAreaSize(rect){ return rect.width - DRULER; }
+  function mmToDrawPx(x,y){
+    const c=document.getElementById('drawCanvas'), rect=c.getBoundingClientRect();
+    const D=drawCanvasAreaSize(rect), ppm=D/wsSize();
+    const baseX=D/2 + x*ppm, baseY=D/2 - y*ppm;
+    return [ DRULER + baseX*drawZoom + drawPanX, DRULER + baseY*drawZoom + drawPanY ];
+  }
+  function drawPxToMM(px,py,rect){
+    const D=drawCanvasAreaSize(rect), ppm=D/wsSize();
+    const baseX=(px-DRULER-drawPanX)/drawZoom, baseY=(py-DRULER-drawPanY)/drawZoom;
+    return [ (baseX-D/2)/ppm, (D/2-baseY)/ppm ];
+  }
+  function drawCanvasEventToMM(e){
+    const c=document.getElementById('drawCanvas'), rect=c.getBoundingClientRect();
+    return drawPxToMM(e.clientX-rect.left, e.clientY-rect.top, rect);
+  }
+  function drawZoomAt(sx, sy, factor){
+    const c=document.getElementById('drawCanvas'), rect=c.getBoundingClientRect();
+    const pre=drawPxToMM(sx,sy,rect);
+    drawZoom=Math.max(0.4, Math.min(120, drawZoom*factor));
+    const D=drawCanvasAreaSize(rect), ppm=D/wsSize();
+    const baseX=D/2+pre[0]*ppm, baseY=D/2-pre[1]*ppm;
+    drawPanX=(sx-DRULER)-baseX*drawZoom;
+    drawPanY=(sy-DRULER)-baseY*drawZoom;
+    redrawDrawCanvas();
+  }
+  function drawRulerAndGrid(ctx, rect){
+    ctx.clearRect(0,0,rect.width,rect.height);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,rect.width,DRULER); ctx.fillRect(0,0,DRULER,rect.height);
+    ctx.strokeStyle='#e2e3e8'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,DRULER+0.5); ctx.lineTo(rect.width,DRULER+0.5); ctx.moveTo(DRULER+0.5,0); ctx.lineTo(DRULER+0.5,rect.height); ctx.stroke();
+
+    const mmLeft=drawPxToMM(DRULER,0,rect)[0], mmRight=drawPxToMM(rect.width,0,rect)[0];
+    const mmTop=drawPxToMM(0,DRULER,rect)[1], mmBottom=drawPxToMM(0,rect.height,rect)[1];
+    const visSpanX=Math.abs(mmRight-mmLeft), visSpanY=Math.abs(mmTop-mmBottom);
+    const stepX=niceStep(visSpanX/6)||1, stepY=niceStep(visSpanY/6)||1;
+
+    ctx.fillStyle='#9aa0ab'; ctx.font='9px '+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    const startX=Math.floor(Math.min(mmLeft,mmRight)/stepX)*stepX;
+    for(let v=startX; v<=Math.max(mmLeft,mmRight)+1e-6; v+=stepX){
+      const [sx]=mmToDrawPx(v, mmBottom);
+      if(sx<DRULER||sx>rect.width) continue;
+      ctx.strokeStyle='#f5f5f7'; ctx.beginPath(); ctx.moveTo(sx,DRULER); ctx.lineTo(sx,rect.height); ctx.stroke();
+      ctx.fillStyle='#9aa0ab'; ctx.fillText(v.toFixed(stepX<1?1:0), sx, 3);
+    }
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    const startY=Math.floor(Math.min(mmTop,mmBottom)/stepY)*stepY;
+    for(let v=startY; v<=Math.max(mmTop,mmBottom)+1e-6; v+=stepY){
+      const [,sy]=mmToDrawPx(mmLeft, v);
+      if(sy<DRULER||sy>rect.height) continue;
+      ctx.strokeStyle='#f5f5f7'; ctx.beginPath(); ctx.moveTo(DRULER,sy); ctx.lineTo(rect.width,sy); ctx.stroke();
+      ctx.save(); ctx.translate(2,sy); ctx.fillStyle='#9aa0ab'; ctx.fillText(v.toFixed(stepY<1?1:0),0,0); ctx.restore();
+    }
+  }
+  function resizeDrawCanvas(){
+    const c=document.getElementById('drawCanvas'), rect=c.getBoundingClientRect();
+    if(rect.width===0) return;
+    const dpr=window.devicePixelRatio||1;
+    c.width=rect.width*dpr; c.height=rect.height*dpr;
+    c.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+  }
+  function typeLabel(t){ return {freehand:'손그림',rect:'사각형',circle:'원',triangle:'삼각형',image:'이미지윤곽선'}[t]||t; }
+  function defMode(){ return document.getElementById('default-mode').value; }
+  function contourMode(s, ci){ return (s.modes && s.modes[ci]) || 'outline'; }
+  function strokeIsClosed(pts){
+    if(pts.length<3) return false;
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+    pts.forEach(p=>{ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; });
+    const diag=Math.hypot(x1-x0,y1-y0);
+    const endGap=Math.hypot(pts[0][0]-pts[pts.length-1][0], pts[0][1]-pts[pts.length-1][1]);
+    return endGap < Math.max(0.3, diag*0.06); // 시작/끝이 충분히 가까우면 스스로 닫은 것으로 판단
+  }
+
+  function distToSeg(p,a,b){
+    const dx=b[0]-a[0], dy=b[1]-a[1]; const len2=dx*dx+dy*dy;
+    if(len2===0) return Math.hypot(p[0]-a[0],p[1]-a[1]);
+    let t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/len2; t=Math.max(0,Math.min(1,t));
+    return Math.hypot(p[0]-(a[0]+t*dx), p[1]-(a[1]+t*dy));
+  }
+  function distToPolyline(pts,p){ let m=Infinity; for(let i=0;i<pts.length;i++){ const a=pts[i], b=pts[(i+1)%pts.length]; m=Math.min(m, distToSeg(p,a,b)); } return m; }
+  function pointInPoly(pts,p){
+    let inside=false;
+    for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+      const xi=pts[i][0], yi=pts[i][1], xj=pts[j][0], yj=pts[j][1];
+      const intersect = ((yi>p[1])!==(yj>p[1])) && (p[0] < (xj-xi)*(p[1]-yi)/((yj-yi)||1e-12)+xi);
+      if(intersect) inside=!inside;
+    }
+    return inside;
+  }
+  function hitContour(contour, closed, p, tol){
+    if(distToPolyline(contour,p) < tol) return true;
+    if(closed && pointInPoly(contour,p)) return true;
+    return false;
+  }
+  // 도형 전체가 아니라 "조각"(개별 contour) 단위로 hit-test — 이미지에서 추출된 여러 조각을
+  // 하나씩 선택해서 이동/삭제할 수 있도록 함
+  function findHitContour(p, tol){
+    for(let si=shapes.length-1; si>=0; si--){
+      const s=shapes[si];
+      for(let ci=s.contours.length-1; ci>=0; ci--){
+        const closed = s.type!=='freehand' || s.closed;
+        if(hitContour(s.contours[ci], closed, p, tol)) return {shapeId:s.id, cIdx:ci};
+      }
+    }
+    return null;
+  }
+
+  function updateSelInfo(){
+    const el=document.getElementById('selInfo');
+    const btnO=document.getElementById('btn-mode-outline'), btnF=document.getElementById('btn-mode-fill');
+    const list=selectedList().filter(r=>{ const s=shapes.find(x=>x.id===r.shapeId); return s && s.contours[r.cIdx]; });
+    if(list.length===0){ el.textContent='그림에서 조각을 클릭하거나 빈 곳에서 드래그(올가미)로 여러 개를 선택할 수 있습니다'; btnO.disabled=true; btnF.disabled=true; }
+    else if(list.length===1){
+      const s=shapes.find(x=>x.id===list[0].shapeId);
+      const m=contourMode(s, list[0].cIdx);
+      el.textContent = `선택됨: ${typeLabel(s.type)}${s.contours.length>1? ' 조각 '+(list[0].cIdx+1)+'/'+s.contours.length : ''} · 모드=${m==='fill'?'채움':'윤곽선'}`;
+      btnO.disabled=false; btnF.disabled=false;
+    } else {
+      el.textContent = `${list.length}개 조각 선택됨`;
+      btnO.disabled=false; btnF.disabled=false;
+    }
+    renderShapeList();
+  }
+  document.getElementById('btn-mode-outline').addEventListener('click', ()=>{
+    const list=selectedList(); if(!list.length) return;
+    list.forEach(r=>{ const s=shapes.find(x=>x.id===r.shapeId); if(s){ if(!s.modes) s.modes=s.contours.map(()=>'outline'); s.modes[r.cIdx]='outline'; } });
+    updateSelInfo(); redrawDrawCanvas();
+  });
+  document.getElementById('btn-mode-fill').addEventListener('click', ()=>{
+    const list=selectedList(); if(!list.length) return;
+    list.forEach(r=>{ const s=shapes.find(x=>x.id===r.shapeId); if(s){ if(!s.modes) s.modes=s.contours.map(()=>'outline'); s.modes[r.cIdx]='fill'; } });
+    updateSelInfo(); redrawDrawCanvas();
+  });
+
+  function renderShapeList(){
+    const list=document.getElementById('shapeList'); if(!list) return;
+    list.innerHTML='';
+    let n=0;
+    shapes.forEach(s=>{
+      s.contours.forEach((contour, ci)=>{
+        n++;
+        const isSel = isSelected(s.id, ci);
+        const row=document.createElement('div'); row.className='shapeRow'+(isSel?' selected':'');
+        const label=document.createElement('span'); label.textContent = `${n}. ${typeLabel(s.type)}`;
+        row.appendChild(label);
+        const modeSel=document.createElement('select');
+        [['outline','윤곽선'],['fill','채움']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; if(contourMode(s,ci)===v) o.selected=true; modeSel.appendChild(o); });
+        modeSel.addEventListener('change', ()=>{ if(!s.modes) s.modes=s.contours.map(()=>'outline'); s.modes[ci]=modeSel.value; updateSelInfo(); redrawDrawCanvas(); });
+        row.appendChild(modeSel);
+        const delBtn=document.createElement('button'); delBtn.textContent='🗑'; delBtn.title='삭제'; delBtn.style.cssText='padding:2px 7px; font-size:11px;';
+        delBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          snapshotHistory();
+          s.contours.splice(ci,1);
+          if(s.modes) s.modes.splice(ci,1);
+          if(s.contours.length===0) shapes=shapes.filter(x=>x.id!==s.id);
+          selectedSet.delete(selKey(s.id,ci));
+          updateSelInfo(); redrawDrawCanvas();
+        });
+        row.appendChild(delBtn);
+        row.addEventListener('click', (e)=>{ if(e.target===modeSel||e.target===delBtn) return; selectedSet=new Set([selKey(s.id,ci)]); updateSelInfo(); redrawDrawCanvas(); });
+        list.appendChild(row);
+      });
+    });
+  }
+
+  function redrawDrawCanvas(){
+    const c=document.getElementById('drawCanvas'), ctx=c.getContext('2d'), rect=c.getBoundingClientRect();
+    if(rect.width===0) return;
+    drawRulerAndGrid(ctx, rect);
+    shapes.forEach(s=>{
+      s.contours.forEach((contour,ci)=>{
+        const isSel = isSelected(s.id, ci);
+        const m = contourMode(s, ci);
+        ctx.beginPath();
+        contour.forEach((p,i)=>{ const [px,py]=mmToDrawPx(p[0],p[1]); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+        if(s.type!=='freehand' || s.closed) ctx.closePath();
+        if(m==='fill'){ ctx.fillStyle = isSel? 'rgba(124,58,237,0.15)' : 'rgba(14,165,233,0.13)'; ctx.fill(); }
+        ctx.strokeStyle = isSel? '#7c3aed' : (m==='fill' ? '#0ea5e9' : '#14151a');
+        ctx.lineWidth = isSel? 2 : 1.3;
+        ctx.stroke();
+      });
+    });
+    ctx.strokeStyle='#7c3aed'; ctx.lineWidth=1.3; ctx.setLineDash([4,3]);
+    if(drawingStroke){
+      ctx.beginPath();
+      drawingStroke.concat([lastPointerMM]).forEach((p,i)=>{ const [px,py]=mmToDrawPx(p[0],p[1]); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+      ctx.stroke();
+    }
+    if(dragStart && currentTool==='rect'){
+      const [x0,y0]=mmToDrawPx(dragStart[0],dragStart[1]), [x1,y1]=mmToDrawPx(lastPointerMM[0],lastPointerMM[1]);
+      ctx.strokeRect(Math.min(x0,x1),Math.min(y0,y1),Math.abs(x1-x0),Math.abs(y1-y0));
+    }
+    if(dragStart && currentTool==='circle'){
+      const [cx,cy]=mmToDrawPx(dragStart[0],dragStart[1]);
+      const [ex,ey]=mmToDrawPx(lastPointerMM[0],lastPointerMM[1]);
+      const r=Math.hypot(ex-cx, ey-cy);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    }
+    if(triClicks.length>0){
+      ctx.beginPath();
+      triClicks.forEach((p,i)=>{ const [px,py]=mmToDrawPx(p[0],p[1]); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+      const [lx,ly]=mmToDrawPx(lastPointerMM[0],lastPointerMM[1]); ctx.lineTo(lx,ly);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    if(lassoPts && lassoPts.length>1){
+      ctx.save();
+      ctx.strokeStyle='#7c3aed'; ctx.lineWidth=1.3; ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      lassoPts.forEach((p,i)=>{ const [px,py]=mmToDrawPx(p[0],p[1]); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  document.querySelectorAll('.tool-btn').forEach(b=>b.addEventListener('click', ()=>{
+    document.querySelectorAll('.tool-btn').forEach(x=>x.classList.toggle('active', x===b));
+    currentTool=b.dataset.tool; triClicks=[]; selectedSet=new Set(); updateSelInfo(); redrawDrawCanvas();
+  }));
+
+  function pointInPolyLoose(pts,p){ return pointInPoly(pts,p); }
+
+  const dcEl=document.getElementById('drawCanvas');
+  let panDragStart=null; // {sx,sy,panX,panY} 화면 좌표 기준 (화면이동 도구용)
+  dcEl.addEventListener('pointerdown', e=>{
+    const p=drawCanvasEventToMM(e); lastPointerMM=p;
+    if(currentTool==='pan'){
+      const rect=dcEl.getBoundingClientRect();
+      panDragStart={sx:e.clientX-rect.left, sy:e.clientY-rect.top, panX:drawPanX, panY:drawPanY};
+      dcEl.setPointerCapture(e.pointerId);
+      return;
+    }
+    if(currentTool==='pen'){ snapshotHistory(); drawingStroke=[p]; dcEl.setPointerCapture(e.pointerId); }
+    else if(currentTool==='rect' || currentTool==='circle'){ snapshotHistory(); dragStart=p; dcEl.setPointerCapture(e.pointerId); }
+    else if(currentTool==='triangle'){
+      if(triClicks.length===0) snapshotHistory();
+      triClicks.push(p);
+      if(triClicks.length===3){
+        shapes.push({id:shapeIdSeq++, type:'triangle', modes:[defMode()], contours:[triClicks.slice()], closed:true});
+        triClicks=[]; updateSelInfo();
+      }
+    }
+    else if(currentTool==='select'){
+      const found=findHitContour(p, Math.max(0.15,wsSize()*0.01));
+      if(found){
+        // 이미 여러 개가 선택된 상태에서 그 중 하나를 클릭하면 선택 그룹 전체를 함께 이동,
+        // 아니면 이 조각 하나만 새로 선택
+        if(!isSelected(found.shapeId, found.cIdx)) selectedSet=new Set([selKey(found.shapeId,found.cIdx)]);
+        snapshotHistory();
+        const entries = selectedList().map(r=>{
+          const s=shapes.find(x=>x.id===r.shapeId);
+          return { shapeId:r.shapeId, cIdx:r.cIdx, orig: JSON.parse(JSON.stringify(s.contours[r.cIdx])) };
+        });
+        moveOrigin={p, entries};
+        dcEl.setPointerCapture(e.pointerId);
+        updateSelInfo();
+      } else {
+        // 빈 곳에서 드래그 시작 → 올가미(lasso) 선택
+        lassoPts=[p];
+      }
+    }
+    redrawDrawCanvas();
+  });
+  dcEl.addEventListener('pointermove', e=>{
+    if(panDragStart){
+      const rect=dcEl.getBoundingClientRect();
+      drawPanX = panDragStart.panX + (e.clientX-rect.left - panDragStart.sx);
+      drawPanY = panDragStart.panY + (e.clientY-rect.top - panDragStart.sy);
+      redrawDrawCanvas();
+      return;
+    }
+    const p=drawCanvasEventToMM(e); lastPointerMM=p;
+    if(drawingStroke){ const last=drawingStroke[drawingStroke.length-1]; if(Math.hypot(p[0]-last[0],p[1]-last[1])>0.05) drawingStroke.push(p); }
+    else if(moveOrigin){
+      const dx=p[0]-moveOrigin.p[0], dy=p[1]-moveOrigin.p[1];
+      moveOrigin.entries.forEach(en=>{
+        const s=shapes.find(x=>x.id===en.shapeId);
+        if(s) s.contours[en.cIdx] = en.orig.map(pt=>[pt[0]+dx,pt[1]+dy]);
+      });
+    }
+    else if(lassoPts){ const last=lassoPts[lassoPts.length-1]; if(Math.hypot(p[0]-last[0],p[1]-last[1])>0.03) lassoPts.push(p); }
+    if(drawingStroke || dragStart || moveOrigin || lassoPts || (currentTool==='triangle' && triClicks.length>0)) redrawDrawCanvas();
+  });
+  dcEl.addEventListener('pointerup', e=>{
+    if(panDragStart){ panDragStart=null; return; }
+    const p=drawCanvasEventToMM(e);
+    if(drawingStroke){
+      if(drawingStroke.length>=2) shapes.push({id:shapeIdSeq++, type:'freehand', modes:[defMode()], contours:[drawingStroke], closed:strokeIsClosed(drawingStroke)});
+      drawingStroke=null; updateSelInfo();
+    } else if(dragStart && currentTool==='rect'){
+      const x0=Math.min(dragStart[0],p[0]), x1=Math.max(dragStart[0],p[0]), y0=Math.min(dragStart[1],p[1]), y1=Math.max(dragStart[1],p[1]);
+      if(x1-x0>0.05 && y1-y0>0.05) shapes.push({id:shapeIdSeq++, type:'rect', modes:[defMode()], contours:[[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]], closed:true});
+      dragStart=null; updateSelInfo();
+    } else if(dragStart && currentTool==='circle'){
+      const r=Math.hypot(p[0]-dragStart[0], p[1]-dragStart[1]);
+      if(r>0.05){ const pts=[]; const N=48; for(let i=0;i<N;i++){ const a=2*Math.PI*i/N; pts.push([dragStart[0]+r*Math.cos(a), dragStart[1]+r*Math.sin(a)]); } shapes.push({id:shapeIdSeq++, type:'circle', modes:[defMode()], contours:[pts], closed:true}); }
+      dragStart=null; updateSelInfo();
+    } else if(moveOrigin){ moveOrigin=null;
+    } else if(lassoPts){
+      if(lassoPts.length>=3){
+        const poly=lassoPts;
+        const matches=new Set();
+        shapes.forEach(s=>{
+          s.contours.forEach((c,ci)=>{
+            if(c.some(pt=>pointInPolyLoose(poly,pt))) matches.add(selKey(s.id,ci));
+          });
+        });
+        selectedSet=matches;
+        updateSelInfo();
+      }
+      lassoPts=null;
+    }
+    redrawDrawCanvas();
+  });
+
+  document.getElementById('ws-size').addEventListener('input', redrawDrawCanvas);
+  dcEl.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const rect=dcEl.getBoundingClientRect();
+    drawZoomAt(e.clientX-rect.left, e.clientY-rect.top, e.deltaY<0?1.15:1/1.15);
+  }, {passive:false});
+  document.getElementById('btn-draw-zoomin').addEventListener('click', ()=>{ const rect=dcEl.getBoundingClientRect(); drawZoomAt(rect.width/2, rect.height/2, 1.3); });
+  document.getElementById('btn-draw-zoomout').addEventListener('click', ()=>{ const rect=dcEl.getBoundingClientRect(); drawZoomAt(rect.width/2, rect.height/2, 1/1.3); });
+  document.getElementById('btn-draw-fitall').addEventListener('click', ()=>{ drawZoom=1; drawPanX=0; drawPanY=0; redrawDrawCanvas(); });
+  document.getElementById('btn-undo').addEventListener('click', undo);
+  document.getElementById('btn-delete').addEventListener('click', ()=>{
+    const list=selectedList(); if(!list.length) return;
+    snapshotHistory();
+    // 같은 도형 안에서 여러 조각을 지울 때 인덱스가 밀리지 않도록 shapeId별로 묶어서 내림차순 삭제
+    const byShape=new Map();
+    list.forEach(r=>{ if(!byShape.has(r.shapeId)) byShape.set(r.shapeId,[]); byShape.get(r.shapeId).push(r.cIdx); });
+    byShape.forEach((cis,shapeId)=>{
+      const s=shapes.find(x=>x.id===shapeId); if(!s) return;
+      cis.sort((a,b)=>b-a).forEach(ci=>{ s.contours.splice(ci,1); if(s.modes) s.modes.splice(ci,1); });
+    });
+    shapes=shapes.filter(s=>s.contours.length>0);
+    selectedSet=new Set();
+    updateSelInfo(); redrawDrawCanvas();
+  });
+  document.getElementById('btn-clear').addEventListener('click', ()=>{
+    if(!shapes.length) return;
+    if(!confirm('전체 도형을 삭제하시겠습니까?')) return;
+    snapshotHistory(); shapes=[]; selectedSet=new Set(); updateSelInfo(); redrawDrawCanvas();
+  });
+
+  // ---------- 이미지 업로드 → 윤곽선 추출 ----------
+  let imgGray=null, imgGrayOriginal=null, imgW=0, imgH=0;
+  function loadImageFile(f){
+    if(!f || !f.type || !f.type.startsWith('image/')){ alert('이미지 파일만 업로드할 수 있습니다.'); return; }
+    const reader=new FileReader();
+    reader.onerror = ()=>{ alert('이미지 파일을 읽는 중 문제가 발생했습니다. 다른 파일로 시도해 주십시오.'); };
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror = ()=>{ alert('이 파일은 이미지로 열 수 없습니다. 지원 형식인지 확인해 주십시오.'); };
+      img.onload=()=>{
+        try{
+          const maxDim=260;
+          const sc=Math.min(1, maxDim/Math.max(img.width,img.height));
+          imgW=Math.max(1,Math.round(img.width*sc)); imgH=Math.max(1,Math.round(img.height*sc));
+          const off=document.createElement('canvas'); off.width=imgW; off.height=imgH;
+          const octx2=off.getContext('2d'); octx2.drawImage(img,0,0,imgW,imgH);
+          const data=octx2.getImageData(0,0,imgW,imgH).data;
+          imgGray=new Float32Array(imgW*imgH);
+          for(let i=0;i<imgW*imgH;i++){ imgGray[i]=0.299*data[i*4]+0.587*data[i*4+1]+0.114*data[i*4+2]; }
+          imgGrayOriginal=imgGray.slice();
+          document.getElementById('imgPreviewBox').style.display='flex';
+          drawImgPreview();
+        }catch(err){
+          alert('이미지 처리 중 오류가 발생했습니다: '+err.message);
+        }
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(f);
+  }
+  document.getElementById('imgInput').addEventListener('change', e=>{
+    const f=e.target.files[0]; if(!f) return;
+    loadImageFile(f);
+    e.target.value=''; // 같은 파일을 다시 선택해도 change 이벤트가 다시 뜨도록
+  });
+  const imgDropZone=document.getElementById('imgDropZone');
+  ['dragover','dragenter'].forEach(evt=>imgDropZone.addEventListener(evt, e=>{ e.preventDefault(); imgDropZone.classList.add('dragover'); }));
+  ['dragleave','dragend'].forEach(evt=>imgDropZone.addEventListener(evt, e=>{ imgDropZone.classList.remove('dragover'); }));
+  imgDropZone.addEventListener('drop', e=>{
+    e.preventDefault(); imgDropZone.classList.remove('dragover');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) loadImageFile(f);
+  });
+  function drawImgPreview(){
+    const canvas=document.getElementById('imgPreviewCanvas');
+    canvas.width=imgW; canvas.height=imgH;
+    const ctx=canvas.getContext('2d');
+    const th=+document.getElementById('img-threshold').value;
+    const inv=document.getElementById('img-invert').checked;
+    const imgData=ctx.createImageData(imgW,imgH);
+    for(let i=0;i<imgW*imgH;i++){
+      let inside = imgGray[i] < th; if(inv) inside=!inside;
+      const v = inside? 30 : 255;
+      imgData.data[i*4]=v; imgData.data[i*4+1]=v; imgData.data[i*4+2]=v; imgData.data[i*4+3]=255;
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+  document.getElementById('img-threshold').addEventListener('input', drawImgPreview);
+  document.getElementById('img-invert').addEventListener('change', drawImgPreview);
+
+  // ---------- 지우개/칠하기: threshold 미리보기 위에서 직접 픽셀을 보정 ----------
+  let brushMode=null; // 'erase' | 'paint' | null
+  let brushing=false;
+  let imgHistory=[];
+  const eraseBtn=document.getElementById('btn-erase-toggle');
+  const paintBtn=document.getElementById('btn-paint-toggle');
+  function setBrushMode(m){
+    brushMode = (brushMode===m) ? null : m;
+    eraseBtn.classList.toggle('primary', brushMode==='erase');
+    paintBtn.classList.toggle('primary', brushMode==='paint');
+  }
+  eraseBtn.addEventListener('click', ()=>setBrushMode('erase'));
+  paintBtn.addEventListener('click', ()=>setBrushMode('paint'));
+  document.getElementById('btn-erase-reset').addEventListener('click', ()=>{
+    if(!imgGrayOriginal) return;
+    imgHistory.push(imgGray.slice());
+    imgGray=imgGrayOriginal.slice();
+    drawImgPreview();
+  });
+  document.getElementById('btn-img-undo').addEventListener('click', ()=>{
+    if(!imgHistory.length) return;
+    imgGray=imgHistory.pop();
+    drawImgPreview();
+  });
+  function brushAt(e){
+    const canvas=document.getElementById('imgPreviewCanvas');
+    const rect=canvas.getBoundingClientRect();
+    const sx=(e.clientX-rect.left) * (imgW/rect.width);
+    const sy=(e.clientY-rect.top) * (imgH/rect.height);
+    const brushDisp=+document.getElementById('img-brush').value||12;
+    const r = brushDisp * (imgW/rect.width);
+    // 지우개=흰색(255), 칠하기=검정(0). invert 체크박스와 무관하게 항상 같은 밝기로 칠해짐 —
+    // 어떻게 "인식"할지는 invert가, 실제 픽셀 밝기는 이 브러시가 결정
+    const val = brushMode==='erase' ? 255 : 0;
+    const x0=Math.max(0,Math.floor(sx-r)), x1=Math.min(imgW-1,Math.ceil(sx+r));
+    const y0=Math.max(0,Math.floor(sy-r)), y1=Math.min(imgH-1,Math.ceil(sy+r));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      if(Math.hypot(x-sx,y-sy)<=r) imgGray[y*imgW+x]=val;
+    }
+    drawImgPreview();
+  }
+  const imgPrevCanvas=document.getElementById('imgPreviewCanvas');
+  imgPrevCanvas.addEventListener('pointerdown', e=>{ if(!brushMode||!imgGray) return; imgHistory.push(imgGray.slice()); if(imgHistory.length>30) imgHistory.shift(); brushing=true; imgPrevCanvas.setPointerCapture(e.pointerId); brushAt(e); });
+  imgPrevCanvas.addEventListener('pointermove', e=>{ if(!brushMode||!brushing) return; brushAt(e); });
+  ['pointerup','pointercancel','pointerleave'].forEach(evt=>imgPrevCanvas.addEventListener(evt, ()=>{ brushing=false; }));
+
+  document.getElementById('btn-extract').addEventListener('click', ()=>{
+    if(!imgGray) return;
+    const th=+document.getElementById('img-threshold').value;
+    const inv=document.getElementById('img-invert').checked;
+    const iso = inv? (255-th) : th;
+    function field(gx,gy){
+      const x=gx-1, y=gy-1;
+      if(x<0||y<0||x>=imgW||y>=imgH) return 255;
+      const v=imgGray[y*imgW+x];
+      return inv? (255-v) : v;
+    }
+    let loops = extractContours(field, imgW+2, imgH+2, iso).map(loop=>loop.map(([gx,gy])=>[gx-1,gy-1]));
+    loops = loops.filter(l=>{
+      let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+      l.forEach(p=>{ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; });
+      return Math.hypot(x1-x0,y1-y0) > 2.5;
+    }).map(l=>douglasPeucker(l, 0.3));
+    if(loops.length===0){ alert('윤곽선을 찾지 못했습니다. threshold를 조정해 주십시오.'); return; }
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+    loops.forEach(l=>l.forEach(p=>{ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; }));
+    const bw=x1-x0, bh=y1-y0;
+    const targetMM=+document.getElementById('img-size').value||15;
+    const sc=targetMM/Math.max(bw,bh,1e-6);
+    const cx=(x0+x1)/2, cy=(y0+y1)/2;
+    const contoursMM = loops.map(l=>l.map(p=>[ (p[0]-cx)*sc, -(p[1]-cy)*sc ]));
+    snapshotHistory();
+    shapes.push({id:shapeIdSeq++, type:'image', modes:contoursMM.map(()=>defMode()), contours:contoursMM, closed:true});
+    updateSelInfo(); redrawDrawCanvas();
+  });
+
+  document.getElementById('btn-img-clear').addEventListener('click', ()=>{
+    if(!imgGray && !imgW) return;
+    if(!confirm('업로드한 이미지를 지울까요? (이미 도형으로 추가된 조각은 남습니다)')) return;
+    imgGray=null; imgGrayOriginal=null; imgW=0; imgH=0; imgHistory=[];
+    brushMode=null; eraseBtn.classList.remove('primary'); paintBtn.classList.remove('primary');
+    document.getElementById('imgPreviewBox').style.display='none';
+    document.getElementById('imgInput').value='';
+  });
+
+  // ---------- 미리보기 생성 ----------
+  function fmtNum(v){ return Math.round(v*1e5)/1e5; }
+
+  // 물리적으로 speed와 pitch는 독립적인 값이 아니라 rep rate에 의해 묶여 있음:
+  // 레이저가 rep rate(kHz)로 펄스를 쏘면서 speed로 이동해야 펄스 간격이 정확히 pitch(µm)가 됨.
+  // speed[mm/s] = rep rate[kHz] × pitch[µm]  (예: 50kHz × 5µm = 250mm/s = 0.25m/s)
+  // 뷰어/애니메이션 내부 계산은 좌표계(mm)에 맞춰 mm/s로 유지하고, 화면 표시와 .sld 내보내기 시에만 m/s로 환산한다
+  // (실제 SCANLAB laserDESK 파일의 <Speed>/<JumpSpeed> 값은 m/s 단위 — 원본 .m 스크립트의 SS[m/s] 주석과 일치).
+  function computeSpeedMmS(){
+    const rr=+document.getElementById('rep-rate').value||50;
+    const pu=+document.getElementById('hatch-pitch').value||5;
+    return rr*pu; // mm/s
+  }
+  function updateCalcSpeed(){
+    document.getElementById('calc-speed').textContent = (computeSpeedMmS()/1000).toFixed(3)+' m/s';
+  }
+  document.getElementById('rep-rate').addEventListener('input', updateCalcSpeed);
+  document.getElementById('hatch-pitch').addEventListener('input', updateCalcSpeed);
+  updateCalcSpeed();
+
+  document.getElementById('btn-generate').addEventListener('click', ()=>{
+    if(shapes.length===0){ alert('도형을 먼저 그리거나 이미지를 추가해 주십시오.'); return; }
+    const pitchUm=+document.getElementById('hatch-pitch').value||5;
+    const pitch=pitchUm/1000; // mm, 도형 좌표계는 mm 기준이므로 변환
+    const angle=+document.getElementById('hatch-angle').value||0;
+    const markSpeed=computeSpeedMmS(); // mm/s (내부/뷰어용), rep rate × pitch로 자동 계산
+    const jumpSpeedV=(+document.getElementById('jump-speed').value||3)*1000; // 입력은 m/s, 내부는 mm/s로 환산
+    const warn=[];
+
+    function makeItem(pts, shapeId, allContours){
+      let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+      pts.forEach(p=>{ if(p[0]<minx)minx=p[0]; if(p[0]>maxx)maxx=p[0]; if(p[1]<miny)miny=p[1]; if(p[1]>maxy)maxy=p[1]; });
+      return {entry:pts[0], exit:pts[pts.length-1], pts, GCX:(minx+maxx)/2, GCY:(miny+maxy)/2, GW:(maxx-minx)||0.01, GH:(maxy-miny)||0.01, shapeId, allContours};
+    }
+    const items=[];
+    shapes.forEach((s,sidx)=>{
+      const hasFill = s.contours.some((c,ci)=>contourMode(s,ci)==='fill');
+      // 채움 계산은 항상 이 도형의 모든 조각을 함께 본다 — 일부 조각이 윤곽선 모드여도
+      // (예: 눈 구멍) even-odd 규칙으로 구멍을 뚫는 데 그 조각이 필요하기 때문
+      if(hasFill){
+        const subregions = hatchFillSegmented(s.contours, pitch, angle, 4);
+        if(subregions.length===0){ warn.push(`${sidx+1}번 도형(${typeLabel(s.type)}): 채움 결과가 비어 건너뜀 (pitch보다 작을 수 있음)`); }
+        subregions.forEach(pts=>{ if(pts.length>=2) items.push(makeItem(pts, s.id, s.contours)); });
+      }
+      s.contours.forEach((c,ci)=>{
+        if(contourMode(s,ci)==='outline' && c.length>=2){
+          items.push(makeItem(s.closed ? c.concat([c[0]]) : c.slice(), s.id, s.contours));
+        }
+      });
+    });
+    if(items.length===0){ alert('생성할 경로가 없습니다.'); return; }
+    const naiveTour = greedyOrder(items, [0,0]).map(idx=>({idx, rev:false}));
+    const smartTour=planRoute(items, [0,0]);
+    const naiveCost = tourDist(items, naiveTour, [0,0]);
+    const smartCost = tourDist(items, smartTour, [0,0]);
+    lastRouteStats = { n:items.length, naiveCost, smartCost, pct: naiveCost>0 ? (naiveCost-smartCost)/naiveCost*100 : 0 };
+    lastItems=items; lastNaiveTour=naiveTour; lastSmartTour=smartTour;
+
+    function nearestDistToContour(contour, p){
+      let best=Infinity;
+      for(let i=0;i<contour.length;i++){ const d=Math.hypot(contour[i][0]-p[0], contour[i][1]-p[1]); if(d<best) best=d; }
+      return best;
+    }
+    function buildCells(tour){
+      const cells = tour.map((t,k)=>{
+        const it=items[t.idx];
+        const pts = t.rev ? it.pts.slice().reverse() : it.pts;
+        return {g:k+1, kind:'polygon', GCX:it.GCX, GCY:it.GCY, GW:it.GW, GH:it.GH, pts:pts.map(p=>[fmtNum(p[0]),fmtNum(p[1])]), SS:markSpeed, JS:jumpSpeedV, _shapeId:it.shapeId, _contours:it.allContours};
+      });
+      for(let i=1;i<cells.length;i++){
+        const prev=cells[i-1], cur=cells[i];
+        if(prev._shapeId===undefined || prev._shapeId!==cur._shapeId || !cur._contours || !cur._contours.length) continue;
+        const prevLast=prev.pts[prev.pts.length-1];
+        const entry=cur.pts[0];
+        const straight=Math.hypot(entry[0]-prevLast[0], entry[1]-prevLast[1]);
+        // 이 특정 점프와 가장 관련 있는(양 끝점에 가장 가까운) 윤곽선 하나를 고른다 —
+        // 도형 전체에서 제일 큰 윤곽선을 무조건 쓰면, 서로 가까운 두 작은 디테일(예: 눈-눈동자) 사이를
+        // 이을 때도 엉뚱하게 몸통 외곽선까지 멀리 돌아가 버리는 문제가 생긴다.
+        let bestContour=null, bestScore=Infinity;
+        cur._contours.forEach(ct=>{
+          if(!ct || ct.length<3) return;
+          const d1=nearestDistToContour(ct, prevLast), d2=nearestDistToContour(ct, entry);
+          if(d1 > straight*0.6+0.05 || d2 > straight*0.6+0.05) return; // 두 끝점 다 이 윤곽선에 충분히 가까워야 후보로 인정
+          const score = d1+d2;
+          if(score<bestScore){ bestScore=score; bestContour=ct; }
+        });
+        if(bestContour){
+          const path=boundaryPath(bestContour, prevLast, entry);
+          let plen=0; for(let k=1;k<path.length;k++) plen+=Math.hypot(path[k][0]-path[k-1][0],path[k][1]-path[k-1][1]);
+          // 경계를 따르는 경로가 직선보다 과도하게 길어지면(관련 없는 먼 윤곽선을 억지로 타는 경우)
+          // 의미가 없으므로 직선 점프로 되돌린다.
+          if(path.length>2 && plen <= straight*2.2 + 0.05){
+            cur.jumpPath = path.map(p=>[fmtNum(p[0]),fmtNum(p[1])]);
+          }
+        }
+      }
+      return cells;
+    }
+    smartRouteState = finalizeState({table:{}, warnings:warn, kind:'polygon', cells:buildCells(smartTour), GN:items.length}, '드로잉 미리보기(최적화)');
+    naiveRouteState = finalizeState({table:{}, warnings:[], kind:'polygon', cells:buildCells(naiveTour), GN:items.length}, '드로잉 미리보기(방향 고정)');
+
+    state = smartRouteState;
+    elapsed=0; playing=false; setPlayBtn(); committed=-1; lastIdxSeen=-1;
+    document.getElementById('src-info').textContent = `드로잉에서 생성됨 · 경로 ${state.GN}개`;
+    document.getElementById('modeTag').textContent='polygon(드로잉)';
+    document.getElementById('kind-note').textContent='드로잉 모드에서 생성된 one-stroke 경로 미리보기입니다. nearest-neighbor와 2-opt로 전체 도형을 함께 검토해 점프 거리를 최소화한 근사 경로이며, 완전한 최적해는 아닙니다. 열린 손그림은 임의로 닫지 않고 그린 그대로 표시합니다.';
+    document.getElementById('leg-min').textContent = (state.ssMin/1000).toFixed(3)+' m/s';
+    document.getElementById('leg-max').textContent = (state.ssMax/1000).toFixed(3)+' m/s';
+    showWarnings(state.warnings);
+    updateRouteStatDisplay();
+    setRouteViewMode('smart');
+    zoom=1; panX=0; panY=0;
+    switchTab('view');
+  });
+
+  let lastItems=null, lastNaiveTour=null, lastSmartTour=null;
+
+  // 같은 도형(shapeId)에서 온 두 조각을 이을 때, 직선으로 빈 공간을 가로지르지 않고
+  // 그 도형의 윤곽선(boundaryContour)을 따라 이동하는 경로를 반환한다.
+  // (짧은 쪽 방향을 선택) — 서로 다른 도형 사이는 참조할 공통 테두리가 없으므로 직선 유지.
+  function boundaryPath(contour, a, b){
+    if(!contour || contour.length<3) return [a,b];
+    function nearestIdx(p){
+      let best=0, bestD=Infinity;
+      for(let i=0;i<contour.length;i++){ const d=Math.hypot(contour[i][0]-p[0],contour[i][1]-p[1]); if(d<bestD){bestD=d;best=i;} }
+      return best;
+    }
+    const ia=nearestIdx(a), ib=nearestIdx(b);
+    const n=contour.length;
+    function arc(from,to,dir){
+      const pts=[]; let i=from, guard=0;
+      while(guard++<=n){ pts.push(contour[i]); if(i===to) break; i=(i+dir+n)%n; }
+      return pts;
+    }
+    const fwd=arc(ia,ib,1), bwd=arc(ia,ib,-1);
+    function len(pts){ let d=0; for(let k=1;k<pts.length;k++) d+=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]); return d; }
+    const chosen = len(fwd)<=len(bwd) ? fwd : bwd;
+    return [a, ...chosen, b];
+  }
+  let naiveRouteState=null, smartRouteState=null;
+
+  let dualPlaying=false, dualElapsed=0, dualLastTs=null;
+
+  function setRouteViewMode(mode){
+    document.querySelectorAll('.routeModeBtn').forEach(b=>b.classList.toggle('primary', b.dataset.mode===mode));
+    dualPlaying=false;
+    if(mode==='smart' && smartRouteState){ state=smartRouteState; elapsed=0; playing=false; setPlayBtn(); committed=-1; lastIdxSeen=-1; zoom=1; panX=0; panY=0; render(true); }
+    else if(mode==='naive' && naiveRouteState){ state=naiveRouteState; elapsed=0; playing=false; setPlayBtn(); committed=-1; lastIdxSeen=-1; zoom=1; panX=0; panY=0; render(true); }
+    else if(mode==='dual' && smartRouteState && naiveRouteState){
+      playing=false; setPlayBtn();
+      state=smartRouteState; zoom=1; panX=0; panY=0;
+      resizeCanvases();
+      dualElapsed=0; dualPlaying=true; dualLastTs=null;
+    }
+  }
+  document.querySelectorAll('.routeModeBtn').forEach(b=>b.addEventListener('click', ()=>setRouteViewMode(b.dataset.mode)));
+
+  function findCellIndexFor(st, tt){
+    const cells=st.cells;
+    if(tt<=0) return 0;
+    if(tt>=st.totalDuration) return cells.length-1;
+    for(let i=0;i<cells.length;i++) if(tt<cells[i].markEnd) return i;
+    return cells.length-1;
+  }
+  // 하나의 경로(state)를 tt 시점까지 진행된 상태로 그린다 — 완료된 cell은 실선, 진행 중인 cell은 부분 진행 + 빔 점
+  function drawPathProgress(ctx, st, tt, color){
+    const cells=st.cells;
+    const idx=findCellIndexFor(st, tt);
+    for(let i=0;i<idx;i++){
+      const c=cells[i];
+      if(i>0){
+        const prevPt=cells[i-1].pts[cells[i-1].pts.length-1];
+        drawJumpFullPath(ctx, prevPt, c, colorAlpha(color,0.5), 0.8);
+      }
+      ctx.strokeStyle=color; ctx.lineWidth=1.2;
+      ctx.beginPath();
+      const [sx0,sy0]=toScreen(c.pts[0][0],c.pts[0][1]); ctx.moveTo(sx0,sy0);
+      for(let k=1;k<c.pts.length;k++){ const [sx,sy]=toScreen(c.pts[k][0],c.pts[k][1]); ctx.lineTo(sx,sy); }
+      ctx.stroke();
+    }
+    const c=cells[idx];
+    let beamPt;
+    if(tt<c.markStart){
+      const frac=c.jumpDur>0? Math.min(1,(tt-c.jumpStart)/c.jumpDur) : 1;
+      const prevPt = idx>0? cells[idx-1].pts[cells[idx-1].pts.length-1] : c.pts[0];
+      const r=drawJumpUpToFrac(ctx, prevPt, c, frac, colorAlpha(color,0.5), 0.8);
+      beamPt=r.screen;
+    } else {
+      const rel=tt-c.markStart;
+      let k=0; while(k<c.cum.length-1 && c.cum[k+1]<rel) k++;
+      const segStart=c.cum[k], segEnd=c.cum[Math.min(k+1,c.cum.length-1)];
+      const segFrac=segEnd>segStart? Math.min(1,(rel-segStart)/(segEnd-segStart)) : 1;
+      const p0=c.pts[k], p1=c.pts[Math.min(k+1,c.pts.length-1)];
+      const mmX=p0[0]+(p1[0]-p0[0])*segFrac, mmY=p0[1]+(p1[1]-p0[1])*segFrac;
+      if(idx>0){
+        const prevLast=cells[idx-1].pts[cells[idx-1].pts.length-1];
+        drawJumpFullPath(ctx, prevLast, c, colorAlpha(color,0.5), 0.8);
+      }
+      ctx.strokeStyle=color; ctx.lineWidth=1.2;
+      ctx.beginPath();
+      const [sx0,sy0]=toScreen(c.pts[0][0],c.pts[0][1]); ctx.moveTo(sx0,sy0);
+      for(let j=1;j<=k;j++){ const [sx,sy]=toScreen(c.pts[j][0],c.pts[j][1]); ctx.lineTo(sx,sy); }
+      const [bx,by]=toScreen(mmX,mmY); ctx.lineTo(bx,by); ctx.stroke();
+      beamPt=[bx,by];
+    }
+    ctx.save();
+    ctx.fillStyle=colorAlpha(color,0.2); ctx.beginPath(); ctx.arc(beamPt[0],beamPt[1],6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=color; ctx.beginPath(); ctx.arc(beamPt[0],beamPt[1],2.4,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  function renderDual(){
+    if(!smartRouteState || !naiveRouteState) return;
+    if(baseC.getBoundingClientRect().width===0) return;
+    clearBase();
+    octx.clearRect(0,0,DISP,DISP);
+    drawPathProgress(octx, naiveRouteState, dualElapsed, '#c9803b');
+    drawPathProgress(octx, smartRouteState, dualElapsed, '#2563eb');
+    const maxDur=Math.max(smartRouteState.totalDuration, naiveRouteState.totalDuration);
+    document.getElementById('hud-time').textContent = `${dualElapsed.toFixed(2)}s (주황=방향고정, 파랑=최적화)`;
+    if(dualElapsed>=maxDur){ dualPlaying=false; }
+  }
+
+  function updateRouteStatDisplay(){
+
+    const el=document.getElementById('optCard');
+    if(!el) return;
+    if(!lastRouteStats){ el.style.display='none'; return; }
+    el.style.display='block';
+    document.getElementById('stat-naive').textContent = lastRouteStats.naiveCost.toFixed(1)+'mm';
+    document.getElementById('stat-smart').textContent = lastRouteStats.smartCost.toFixed(1)+'mm';
+    document.getElementById('stat-pct').textContent = lastRouteStats.pct.toFixed(1)+'%';
+    document.getElementById('optBarNaive').style.width = '100%';
+    const ratio = lastRouteStats.naiveCost>0 ? Math.min(100, lastRouteStats.smartCost/lastRouteStats.naiveCost*100) : 0;
+    document.getElementById('optBarSmart').style.width = ratio+'%';
+  }
+
+
+  // ---------- SCANLAB 텍스트로 내보내기 ----------
+  // 실제 사용 중인 SCANLAB laserDESK 템플릿(Header+Definitions+LibraryElement)을 그대로 내장 —
+  // 더 이상 빈 .sld 파일에 수동으로 복사/붙여넣기 할 필요 없이, 내보낸 파일을 바로 .sld로 저장해서 열면 됨.
+  const SLD_BOILERPLATE = `<?xml version="1.0" encoding="utf-16"?>
+<ModelData>
+  <Header>
+    <ApplicationVersion Value="1.4.1.4" />
+  </Header>
+  <Definitions>
+    <Layers />
+    <HardwareParameter>
+      <OpticParameter>
+        <Lens Value="" />
+        <UseVariablePolygonDelay Value="False" />
+        <VariablePolygonDelayFile Value="" />
+        <MarkingAreaWidth Value="120" />
+        <MarkingAreaHeight Value="120" />
+        <HomePositionEnabled Value="True" />
+        <HomePositionX Value="-5" />
+        <HomePositionY Value="-30" />
+        <UseSecondScanHead Value="False" />
+        <UseIntelliWeld Value="False" />
+        <HPSActive Value="False" />
+        <HPSPreviewTime Value="1200" />
+        <HPSLimitOfAcceleration Value="0" />
+        <HPSSpeedLimit Value="0" />
+        <HPSFraction Value="0" />
+        <HPSLaserOnSignalCompensation Value="0" />
+        <HPSLaserOffSignalCompensation Value="0" />
+        <HPSEdgeScale Value="0" />
+        <HPSEndScale Value="0" />
+        <TimelagHead1 Value="0" />
+        <TimelagHead2 Value="0" />
+      </OpticParameter>
+      <ScanHeads>
+        <ScanHead>
+          <LaserCorrectionFile Value="C:\\Program Files (x86)\\SCANLAB\\laserDESK\\RTC5\\017700-406-26_SS-II-20.ct5" />
+          <OpticCalibrationFactorX Value="-10" />
+          <OpticCalibrationFactorY Value="-10" />
+          <OpticCalibrationFactorZ Value="0" />
+          <UsePilotLaserCorrectionFile Value="False" />
+          <PilotLaserCorrectionFile Value="" />
+          <UsePilotLaserCalibrationFactor Value="False" />
+          <PilotLaserCalibrationFactorX Value="0" />
+          <PilotLaserCalibrationFactorY Value="0" />
+          <PilotLaserCalibrationFactorZ Value="0" />
+          <OriginShiftX Value="0" />
+          <OriginShiftY Value="0" />
+          <OriginShiftZ Value="0" />
+          <CoordinateSystemRotationAngle Value="0" />
+          <CoordinateSystemMirrorX Value="False" />
+          <CoordinateSystemMirrorY Value="False" />
+          <ScanHeadMonitoringTemperature Value="False" />
+          <ScanHeadMonitoringPower Value="False" />
+        </ScanHead>
+        <ScanHead>
+          <LaserCorrectionFile Value="" />
+          <OpticCalibrationFactorX Value="0" />
+          <OpticCalibrationFactorY Value="0" />
+          <OpticCalibrationFactorZ Value="0" />
+          <UsePilotLaserCorrectionFile Value="False" />
+          <PilotLaserCorrectionFile Value="" />
+          <UsePilotLaserCalibrationFactor Value="False" />
+          <PilotLaserCalibrationFactorX Value="0" />
+          <PilotLaserCalibrationFactorY Value="0" />
+          <PilotLaserCalibrationFactorZ Value="0" />
+          <OriginShiftX Value="0" />
+          <OriginShiftY Value="0" />
+          <OriginShiftZ Value="0" />
+          <CoordinateSystemRotationAngle Value="0" />
+          <CoordinateSystemMirrorX Value="False" />
+          <CoordinateSystemMirrorY Value="False" />
+          <ScanHeadMonitoringTemperature Value="False" />
+          <ScanHeadMonitoringPower Value="False" />
+        </ScanHead>
+      </ScanHeads>
+      <LaserParameter>
+        <LaserType Value="GeneralType" />
+        <CalibrationFactorOfPower Value="1" />
+        <PowerChangeDelay Value="0" />
+        <ShutterOpenDelay Value="0" />
+        <ShutterCloseDelay Value="0" />
+        <AutomaticShutterSwitch Value="False" />
+        <StandbyPower Value="50" />
+        <DelayToStandby Value="-1" />
+        <QSwitchDelay Value="0" />
+        <MarkingResolution Value="0.05" />
+        <SerialPort Value="NoCOM" />
+      </LaserParameter>
+      <MOFParameter>
+        <Type Value="X" />
+        <CalibrationFactorX Value="1" />
+        <CalibrationFactorY Value="1" />
+        <CalibrationFactorRotation Value="1" />
+        <RotationCenter X="0" Y="0" />
+        <SimulateEncoder Value="False" />
+        <CheckWorkingField Value="True" />
+      </MOFParameter>
+      <MiscParameter>
+        <IODefault Value="0" />
+        <ApplyIOInitialisation Value="True" />
+        <MissedJobEndBreak Value="False" />
+        <IOActivationOfAutomation Value="False" />
+      </MiscParameter>
+      <HardwareDevicesParameter>
+        <RemoteConnectionType Value="2" />
+        <RemoteSerialConnectionName Value="KU" />
+        <RemoteTCPServerPort Value="3000" />
+        <MotorControlAxisParameters />
+      </HardwareDevicesParameter>
+      <PCInterfacesParameter>
+        <SerialPorts>
+          <SerialParameter>
+            <Name Value="KU" />
+            <Port Value="COM50" />
+            <BaudRate Value="9600" />
+            <Parity Value="0" />
+            <DataBits Value="8" />
+            <StopBits Value="1" />
+          </SerialParameter>
+        </SerialPorts>
+      </PCInterfacesParameter>
+      <SSEIVisionParameter>
+        <SSEIDLLPath Value="&lt;default&gt;" />
+        <SSEIConfigPath Value="&lt;default&gt;" />
+        <ServerIP Value="127.0.0.1" />
+        <ServerPort Value="22222" />
+        <Timeout Value="30000" />
+        <LogSSEIConnection Value="False" />
+      </SSEIVisionParameter>
+    </HardwareParameter>
+  </Definitions>
+  <LibraryElement>
+    <UID Value="G#36" />
+    <Label Value="Library" />
+    <Area Value="True" />
+    <MarkingParameterReference Value="&lt;default&gt;" />
+    <HatchParameterReference Value="&lt;default&gt;" />
+    <BitmapParameterReference Value="&lt;default&gt;" />
+    <GraphicResolution Value="0.02" />
+    <HardwareParameters />
+    <MarkingParameters>
+      <MarkingParameter Name="&lt;default&gt;">
+        <Label Value="&lt;default&gt;" />
+        <Speed Value="0.14" />
+        <JumpSpeed Value="3" />
+        <Power Value="75" />
+        <Frequency Value="10" />
+        <PulseLength Value="10" />
+        <InitialImpulseSuppression Value="100" />
+        <PulsedModeActive Value="True" />
+        <DelayAfterJump Value="300" />
+        <DelayAfterMark Value="200" />
+        <DelayInPolygon Value="50" />
+        <DelayLaserOn Value="200" />
+        <DelayLaserOff Value="250" />
+        <WobbleModeActive Value="False" />
+        <WobbleFrequency Value="0" />
+        <WobbleAmplitudeLongitudinal Value="0" />
+        <WobbleAmplitudeTransversal Value="0" />
+        <SkyWritingMode Value="Off" />
+        <SkyWritingTimeLag Value="200" />
+        <SkyWritingLaserOnShift Value="0" />
+        <SkyWritingForerun Value="300" />
+        <SkyWritingOverrun Value="200" />
+        <SkyWritingAngleLimit Value="0" />
+      </MarkingParameter>
+    </MarkingParameters>
+    <HatchParameters>
+      <HatchParameter Name="&lt;default&gt;">
+        <Label Value="&lt;default&gt;" />
+        <FillingType Value="2" />
+        <Distance Value="0.5" />
+        <HatchAngle Value="Absolute" />
+        <AngleCount Value="1" />
+        <Angle Value="0" />
+        <AngleStep Value="90" />
+        <LineReduction Value="0" />
+        <OutlineReduction Value="0" />
+        <Beamcomp Value="0" />
+        <NumberOfLoops Value="0" />
+        <LineJoinType Value="Round" />
+        <JoinFirstLinesRound Value="True" />
+        <ReverseOrderOfLoops Value="False" />
+        <Tolerance Value="0.05" />
+        <SegmentCount Value="2" />
+        <JumpReduction Value="False" />
+        <Sort Value="False" />
+        <SearchRadius Value="2" />
+      </HatchParameter>
+    </HatchParameters>
+    <BitmapParameters>
+      <BitmapParameter Name="&lt;default&gt;">
+        <Label Value="&lt;default&gt;" />
+        <PixelDistance Value="100" />
+        <DitheringProcedure Value="FloydSteinberg" />
+        <BitmapCalibrationTable>
+          <BitmapCalibrationValue>
+            <GreyValue Value="0" />
+            <Power Value="100" />
+            <PulseLength Value="0" />
+          </BitmapCalibrationValue>
+          <BitmapCalibrationValue>
+            <GreyValue Value="255" />
+            <Power Value="100" />
+            <PulseLength Value="10" />
+          </BitmapCalibrationValue>
+        </BitmapCalibrationTable>
+        <DefaultPixelValue Value="0" />
+        <BlackValue Value="255" />
+        <Bidirectional Value="False" />
+        <RowSynchronization Value="0" />
+      </BitmapParameter>
+    </BitmapParameters>
+    <FontsElement />
+    <ShapesElement />
+  </LibraryElement>
+  `;
+
+  function exportSCANLAB(){
+    if(!state){ alert('먼저 경로를 생성하거나 파일을 불러와 주십시오.'); return; }
+    const polyCells = state.cells.filter(c=>c.kind==='polygon');
+    if(polyCells.length===0){ alert('polygon 타입 cell이 없어 내보낼 수 없습니다(rectangle 타입은 아직 지원하지 않습니다).'); return; }
+    const mp = (indent)=>{
+      const pad=' '.repeat(indent);
+      return `${pad}<Power Value="75" />\n${pad}<Frequency Value="10" />\n${pad}<PulseLength Value="10" />\n${pad}<InitialImpulseSuppression Value="100" />\n${pad}<PulsedModeActive Value="True" />\n${pad}<DelayAfterJump Value="300" />\n${pad}<DelayAfterMark Value="200" />\n${pad}<DelayInPolygon Value="50" />\n${pad}<DelayLaserOn Value="200" />\n${pad}<DelayLaserOff Value="250" />\n${pad}<WobbleModeActive Value="False" />\n${pad}<WobbleFrequency Value="0" />\n${pad}<WobbleAmplitudeLongitudinal Value="0" />\n${pad}<WobbleAmplitudeTransversal Value="0" />\n${pad}<SkyWritingMode Value="Off" />\n${pad}<SkyWritingTimeLag Value="200" />\n${pad}<SkyWritingLaserOnShift Value="0" />\n${pad}<SkyWritingForerun Value="300" />\n${pad}<SkyWritingOverrun Value="200" />\n${pad}<SkyWritingAngleLimit Value="0" />\n`;
+    };
+    let out = SLD_BOILERPLATE;
+    out += '  <JobElement>\n';
+    out += '    <UID Value="G#1" />\n    <Label Value="Job" />\n    <Area Value="True" />\n    <MarkingParameterReference Value="&lt;default&gt;" />\n    <HatchParameterReference Value="&lt;default&gt;" />\n    <BitmapParameterReference Value="&lt;default&gt;" />\n    <GraphicResolution Value="0.02" />\n';
+    out += '    <JobMOFParameter>\n      <UseMOF Value="False" />\n      <DelayEncoder Value="X" />\n      <EncoderDelay Value="0" />\n      <NumberOfSimulatedStarts Value="0" />\n      <DelaySimulatedStart Value="0" />\n    </JobMOFParameter>\n';
+    out += '    <ChildElements>\n';
+    let nn = state.cells.length;
+    state.cells.forEach(c=>{
+      if(c.kind!=='polygon') return;
+      nn++;
+      // 뷰어 내부 계산은 mm/s(좌표계가 mm)지만, 실제 SCANLAB laserDESK 파일의 <Speed>/<JumpSpeed>는
+      // m/s 단위(원본 .m 스크립트의 SS[m/s] 주석 및 실제 참조 파일과 일치) — 여기서 변환
+      const speedMps = c.SS/1000, jumpMps = c.JS/1000;
+      out += `      <GroupElement>\n        <UID Value="G#${c.g}" />\n        <Label Value="Group" />\n        <Rotation Value="0" />\n        <Translation X="0" Y="0" Z="0" />\n        <Area Value="True" />\n        <MarkingParameter>\n          <Speed Value="${fmtNum(speedMps)}" />\n          <JumpSpeed Value="${fmtNum(jumpMps)}" />\n`;
+      out += mp(10);
+      out += `        </MarkingParameter>\n        <GraphicResolution Value="0.02" />\n        <Box>\n          <Center X="${fmtNum(c.GCX)}" Y="${fmtNum(c.GCY)}" />\n          <Width Value="${fmtNum(c.GW)}" />\n          <Height Value="${fmtNum(c.GH)}" />\n        </Box>\n        <ChildElements>\n`;
+      out += `          <PolygonElement>\n            <UID Value="G#${nn}" />\n            <Label Value="Polygon" />\n            <Area Value="False" />\n            <MarkingParameter>\n              <Speed Value="${fmtNum(speedMps)}" />\n              <JumpSpeed Value="${fmtNum(jumpMps)}" />\n`;
+      out += mp(14);
+      out += `            </MarkingParameter>\n            <OutlinesChanged Value="True" />\n            <GraphicResolution Value="0.02" />\n            <Box>\n              <Center X="${fmtNum(c.GCX)}" Y="${fmtNum(c.GCY)}" />\n              <Width Value="${fmtNum(c.GW)}" />\n              <Height Value="${fmtNum(c.GH)}" />\n            </Box>\n            <IsBorder Value="False" />\n            <ChildElements>\n              <OutlinePolygonElement>\n                <Label Value="Outline" />\n                <Area Value="False" />\n                <GraphicResolution Value="0.02" />\n                <Box>\n                  <Center X="${fmtNum(c.GCX)}" Y="${fmtNum(c.GCY)}" />\n                  <Width Value="${fmtNum(c.GW)}" />\n                  <Height Value="${fmtNum(c.GH)}" />\n                </Box>\n                <IsBorder Value="True" />\n                <IsClosed Value="False" />\n                <Points>\n`;
+      c.pts.forEach(p=>{ out += `                  <Point X="${fmtNum(p[0])}" Y="${fmtNum(p[1])}" />\n`; });
+      out += `                </Points>\n              </OutlinePolygonElement>\n            </ChildElements>\n          </PolygonElement>\n        </ChildElements>\n      </GroupElement>\n`;
+    });
+    out += '    </ChildElements>\n  </JobElement>\n</ModelData>\n';
+    // laserDESK가 실제로 쓰는 .sld는 UTF-16LE(BOM 포함) 형식으로 보임(빈 템플릿 sld 파일도 그 형식이었음) —
+    // 그 형식 그대로 바이트를 만들어서 브라우저 인코딩 추측에 기대지 않게 함
+    const bytes = toUTF16LEBytes(out);
+    const blob=new Blob([bytes], {type:'application/octet-stream'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='scanlab_export.sld'; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function toUTF16LEBytes(str){
+    const buf=new ArrayBuffer(2 + str.length*2);
+    const view=new DataView(buf);
+    view.setUint8(0, 0xFF); view.setUint8(1, 0xFE); // BOM (little-endian)
+    for(let i=0;i<str.length;i++) view.setUint16(2+i*2, str.charCodeAt(i), true);
+    return new Uint8Array(buf);
+  }
+  document.getElementById('btn-export').addEventListener('click', exportSCANLAB);
+
+  // ============================================================
+  // 6. 파일 로드
+  // ============================================================
+  function showWarnings(list){
+    const box=document.getElementById('warnBox');
+    if(!list || list.length===0){ box.style.display='none'; box.textContent=''; return; }
+    box.style.display='block';
+    box.textContent = '파싱 참고사항 ('+list.length+'):\n' + list.slice(0,12).join('\n') + (list.length>12? `\n... 외 ${list.length-12}개` : '');
+  }
+
+  function loadSource(src, label){
+    const built = buildFromSource(src, label);
+    state = finalizeState(built, label);
+    elapsed=0; playing=false; setPlayBtn(); committed=-1; lastIdxSeen=-1;
+    document.getElementById('src-info').textContent = `로드됨: ${label} · cell ${state.GN}개`;
+    document.getElementById('modeTag').textContent = state.kind==='rect' ? 'rectangle' : (state.kind==='polygon'?'polygon':'unknown');
+    document.getElementById('kind-note').textContent = state.kind==='rect'
+      ? 'rectangle 타입입니다. 사각형 중심의 이동 순서와 겹침 영역(반투명 누적)만 근사적으로 표시합니다. 내부 hatch 채움 경로는 SCANLAB 소프트웨어가 자체 처리하므로 이 스크립트만으로는 알 수 없습니다.'
+      : '';
+    document.getElementById('leg-min').textContent = (state.ssMin/1000).toFixed(3)+' m/s';
+    document.getElementById('leg-max').textContent = (state.ssMax/1000).toFixed(3)+' m/s';
+    showWarnings(state.warnings);
+    lastRouteStats=null; lastItems=null; naiveRouteState=null; smartRouteState=null; updateRouteStatDisplay();
+    zoom=1; panX=0; panY=0;
+    resizeCanvases();
+    render(true);
+  }
+
+  document.getElementById('fileInput').addEventListener('change', e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const reader=new FileReader();
+    reader.onload = ()=> loadSource(reader.result, f.name);
+    reader.readAsText(f);
+  });
+
+  // ============================================================
+  // 7. 기본 로드 (Rasterscan_I0340_N800_260429.m)
+  // ============================================================
+  const DEFAULT_SRC = `clc;
+clear;
+RR = 50;
+GN = 144;
+s = 'R' * ones(1,GN);
+l = 'D' * ones(1,GN);
+SPx = 5.1265;
+ds = SPx * ones(1,GN);
+SPy = 5.1265;
+dl = SPy * ones(1,GN);
+GN = length(dl);
+SS = RR * ds / 1000;
+JS = SS;
+PH = 1.2 * ones(1,GN);
+PW = 1.2 * ones(1,GN);
+E = round( ( PH * 1000 ) ./ dl );
+F = rem(E,2);
+[aa, bb] = find(F == 0);
+E(bb) = E(bb) - 1;
+LN = [E];
+PN = LN * 2;
+R = 0;
+row_values = [-8.2, -6.6, -5, -3.4, -1.8, -0.2, 1.4, 3, 4.6, 6.2, 7.8, 9.4];
+GTX = repmat(row_values, 12, 1);
+col_values = [9.4:-1.6:-8.2];
+GTY = repmat(col_values', 1, 12);
+Xtran = 0 * ones(1,GN);
+Ytran = 0 * ones(1,GN);
+for g = 1:GN
+end
+`;
+  loadSource(DEFAULT_SRC, 'Rasterscan_I0340_N800_260429.m (내장 기본값)');
+
+  // 드로잉 탭이 기본 활성 상태이므로 초기 사이즈 세팅
+  resizeDrawCanvas();
+  redrawDrawCanvas();
+  updateSelInfo();
+
+})();
+</script>
+</body>
+</html>

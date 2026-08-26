@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeamPath — Virtual Optics System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f7fa; --panel-border:#dde1ea;
+    --ink:#181b26; --muted:#6b7280; --outline:#14161f; --amber:#f5a623;
+    --good:#16a34a; --danger:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ background:var(--bg); color:var(--ink); font-family:"Pretendard","JetBrains Mono",-apple-system,sans-serif; }
+  .mono{ font-family:"JetBrains Mono", monospace; }
+
+  header{ padding:20px 24px 8px; border-bottom:1px solid var(--panel-border); }
+  header .title{ display:flex; align-items:baseline; gap:10px; }
+  header h1{ margin:0; font-size:21px; font-weight:800; }
+  header .subtitle{ font-size:11.5px; color:var(--muted); font-weight:600; text-transform:uppercase; }
+  header p.desc{ margin:6px 0 12px; color:var(--muted); font-size:11.5px; }
+
+  .layout{ display:flex; gap:14px; padding:14px 24px 40px; align-items:flex-start; overflow-x:auto; }
+  .controls{ flex:0 0 240px; }
+  .main-col{ flex:0 0 auto; display:flex; flex-direction:column; gap:14px; }
+
+  .stage-panel{ background:var(--panel); border:2px solid var(--outline); border-radius:16px; padding:10px; height:640px; overflow:hidden; display:flex; gap:10px; }
+  .order-sidebar{ flex:0 0 190px; overflow-y:auto; background:#fff; border-radius:10px; border:1.5px solid var(--panel-border); padding:8px 10px; }
+  .diagram-area{ flex:0 0 800px; background:#fff; border-radius:10px; border:1.5px solid var(--panel-border); overflow:hidden; }
+  .diagram-area svg{ width:100%; height:100%; display:block; }
+  .results-sidebar{ flex:0 0 300px; height:auto; align-self:flex-start; display:flex; flex-direction:column; gap:14px; border:2px solid var(--outline); border-radius:16px; padding:14px; background:#fff; }
+  .results-sidebar .block{ }
+  .results-sidebar .block + .block{ padding-top:14px; border-top:1px solid var(--panel-border); }
+
+  .card{ background:#fff; border:2px solid var(--outline); border-radius:13px; padding:12px 13px; margin-bottom:12px; }
+  .card h2{ font-size:12px; margin:0 0 9px; font-weight:800; display:flex; align-items:center; gap:6px; }
+  .dot{ width:7px;height:7px;border-radius:50%; display:inline-block; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:7px 8px; }
+  .field{ display:flex; flex-direction:column; gap:2px; transition:opacity .15s; }
+  .field label{ font-size:10.2px; color:var(--muted); font-weight:600; }
+  .field input[type=number], .field select{
+    background:var(--panel); border:1.5px solid var(--panel-border); border-radius:6px;
+    color:var(--ink); padding:5px 6px; font-family:"JetBrains Mono",monospace; font-size:11.5px; width:100%;
+  }
+  .field select{ font-family:"Pretendard",sans-serif; font-size:11px; }
+  .hint{ font-size:9.5px; color:#9aa1b4; }
+
+  .dual{ margin-bottom:3px; display:flex; align-items:center; gap:8px; padding:2px 0; }
+  .dual .lbl{ font-size:10.6px; color:var(--ink); font-weight:600; flex:0 0 90px; }
+  .dual .row{ display:flex; align-items:center; gap:4px; flex:1; min-width:0; }
+  .dual input[type=range]{ flex:1; min-width:0; height:3px; }
+  .dual input[type=number]{ width:56px; background:var(--panel); border:1.5px solid var(--panel-border); border-radius:6px; padding:3px 4px; font-family:"JetBrains Mono",monospace; font-size:10.8px; text-align:right; flex-shrink:0; }
+  .stepbtn{ width:18px; height:18px; flex-shrink:0; border-radius:5px; border:1.5px solid var(--panel-border); background:var(--panel); cursor:pointer; font-size:11px; font-weight:700; line-height:1; padding:0; color:var(--ink); }
+  .stepbtn:hover{ background:#eceef3; }
+  .process-btn-icon{ background:var(--amber); border-color:var(--outline); font-size:12px; }
+  .process-btn-icon:hover{ filter:brightness(1.05); }
+  .btn-block{ width:100%; margin-top:8px; padding:8px; border-radius:8px; border:1.5px solid var(--outline); background:#fff; color:#181b26; font-weight:700; font-size:11.5px; cursor:pointer; }
+  .btn-block:hover{ background:var(--panel); }
+  input[type=range]{ accent-color:var(--amber); -webkit-appearance:none; appearance:none; background:transparent; }
+  input[type=range]::-webkit-slider-runnable-track{ height:4px; background:#e2e5ec; border-radius:4px; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:6px; height:16px; border-radius:2px; background:#fff; border:2px solid #14161f; margin-top:-6px; }
+  input[type=range]::-moz-range-track{ height:4px; background:#e2e5ec; border-radius:4px; }
+  input[type=range]::-moz-range-thumb{ width:6px; height:16px; border:2px solid #14161f; border-radius:2px; background:#fff; }
+
+  .note{ font-size:9.8px; color:#9aa1b4; line-height:1.45; margin-top:6px; }
+
+  .result-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .result-box{ background:var(--panel); border:1.5px solid var(--panel-border); border-radius:9px; padding:8px; }
+  .result-box .k{ font-size:9.6px; color:var(--muted); margin-bottom:2px; font-weight:600; }
+  .result-box .v{ font-family:"JetBrains Mono",monospace; font-size:15px; font-weight:800; }
+  .result-box .v small{ font-size:10px; color:var(--muted); font-weight:500; }
+
+  .target-box{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--panel-border); }
+  .target-status{ margin-top:7px; font-size:11.3px; padding:8px 9px; border-radius:8px; background:var(--panel); line-height:1.5; }
+  .target-status.ok{ color:var(--good); } .target-status.bad{ color:var(--danger); }
+
+  .loss-list{ display:flex; flex-direction:column; gap:3px; font-size:10.8px; }
+  .loss-row{ display:flex; justify-content:space-between; padding:3px 7px; border-radius:6px; background:var(--panel); }
+  .loss-row.final{ background:#eef2ff; font-weight:800; }
+
+  .profile-controls{ display:flex; align-items:center; gap:6px; margin-bottom:7px; flex-wrap:wrap; }
+  .zbtn{ width:24px; height:24px; border-radius:6px; border:1.5px solid var(--panel-border); background:var(--panel); cursor:pointer; font-weight:700; font-size:13px; }
+  .zbtn:hover{ background:#eceef3; }
+  .profile-controls .zoomlabel{ font-size:10px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+  .profile-controls select{ font-size:10.5px; padding:3px 5px; border-radius:6px; border:1.5px solid var(--panel-border); background:var(--panel); }
+  .switch{ position:relative; width:32px; height:18px; background:#d8dbe6; border-radius:20px; cursor:pointer; flex-shrink:0; }
+  .switch.on{ background:var(--amber); }
+  .switch::after{ content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; background:#fff; border-radius:50%; transition:left .15s; }
+  .switch.on::after{ left:16px; }
+  .switch.sm{ width:24px; height:14px; }
+  .switch.sm::after{ width:10px; height:10px; top:2px; left:2px; }
+  .switch.sm.on::after{ left:12px; }
+  #profileCanvas{ width:100%; height:520px; border-radius:9px; border:1.5px solid var(--panel-border); background:#ffffff; display:block; }
+
+  .list-row{ display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid #eef0f4; }
+  .list-row.fixed{ opacity:0.55; }
+  .list-row.inactive{ opacity:0.35; }
+  .row-num{ font-size:10.5px; color:var(--muted); font-weight:700; width:15px; flex-shrink:0; }
+  .pin-btn{ cursor:pointer; font-size:13px; width:16px; text-align:center; user-select:none; flex-shrink:0; }
+  .pin-btn.unpinned{ filter:grayscale(1) opacity(0.5); }
+  .comp-name{ flex:1; font-size:12.3px; font-weight:700; }
+
+  .result-table{ width:100%; border-collapse:collapse; border:2px solid #000; background:#fff; border-radius:10px; overflow:hidden; }
+  .result-table caption{ background:#111827; color:#fff; font-weight:800; font-size:11.5px; padding:7px 10px; text-align:left; caption-side:top; }
+  .result-table td{ border-top:1px solid #000; padding:6px 9px; font-size:11.5px; }
+  .result-table td.k{ color:#374151; width:52%; cursor:help; text-decoration:underline dotted; text-decoration-color:#c3c8d2; text-underline-offset:3px; }
+  .result-table td.v{ font-family:"JetBrains Mono",monospace; font-weight:800; color:#111827; text-align:right; }
+  .results-sidebar table.result-table{ border:none; border-radius:0; }
+  .results-sidebar table.result-table td{ border-top:1px solid #eef0f4; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title"><h1>BeamPath</h1><span class="subtitle">Virtual Optics System</span></div>
+  <p class="desc">Laser → Att.&Shutter → M1 → M2 → BET → M3 → M4 → M5 → Waveplate → Scanner(dummy) → Stage &nbsp;|&nbsp; f=255mm (fixed). Focus size is set by "Measured Focus ⌀" in Laser Source — edit it to match your actual beam-profiler reading. Path shape is fixed — toggling a component only removes its icon, not the beam path.</p>
+</header>
+
+<div class="layout">
+
+  <div class="controls">
+    <div class="card">
+      <h2 style="justify-content:space-between;"><span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:#8b5cf6"></span>Laser Source</span><button class="zbtn process-btn-icon" title="Apply changes">▶</button></h2>
+      <div class="grid2">
+        <div class="field"><label>Wavelength</label>
+          <select id="wavelength">
+            <option value="1064">1064nm IR</option>
+            <option value="532">532nm Green</option>
+            <option value="355" selected>355nm UV</option>
+            <option value="266">266nm DeepUV</option>
+          </select>
+        </div>
+        <div class="field"><label>P<sub>avg</sub> (W)</label><input type="number" id="pavg" value="3.5" step="0.1" min="0.1" max="20"></div>
+        <div class="field"><label>rep rate (kHz)</label><input type="number" id="reprate" value="50" step="1" min="1" max="500"></div>
+        <div class="field"><label>Pulse width (ns)</label><input type="number" id="pulsewidth" value="17" step="1" min="1" max="200"></div>
+        <div class="field"><label>M² (beam quality)</label><input type="number" id="msq" value="1.2" step="0.05" min="1" max="3"></div>
+        <div class="field"><label title="Editable — enter your own beam-profiler measurement here. Default (192 µm) is only a fallback taken from a published reference paper's specific setup, not your bench.">Measured Focus ⌀ (μm)</label><input type="number" id="focusDiaInput" value="192" step="1" min="1" max="2000">
+          <div class="hint" id="w0-derived" style="margin-top:2px;">w₀' = 96.0 μm</div>
+        </div>
+        <div class="field"><label title="Huaray Poplar-355-3&5 spec: beam diameter at laser outlet is < 8mm.">Raw Beam ⌀ (mm)</label><input type="number" id="rawBeamDia" value="8" step="0.1" min="0.1" max="50"></div>
+        <div class="field"><label title="Huaray Poplar-355-3&5 spec: full-angle divergence ≤ 2mrad at the laser outlet.">Divergence (mrad)</label><input type="number" id="divergence" value="2" step="0.1" min="0.01" max="50"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="justify-content:space-between;"><span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:var(--amber)"></span>Component Values</span><button class="zbtn process-btn-icon" title="Apply changes">▶</button></h2>
+      <div class="grid2">
+        <div class="field"><label>Attenuator T (%)</label><input type="number" id="attT" value="80" step="1" min="0" max="100"></div>
+        <div class="field"><label>Mirror R (%, shared)</label><input type="number" id="mirrorR" value="99" step="0.1" min="80" max="100"></div>
+        <div class="field" id="field-betM"><label>BET Mag. M<sub>BET</sub> (×)</label><input type="number" id="betM" value="2.0" step="0.1" min="1" max="10"></div>
+        <div class="field" id="field-betT"><label>BET T (%)</label><input type="number" id="betT" value="98" step="1" min="0" max="100"></div>
+        <div class="field"><label>Waveplate Type</label>
+          <select id="wpType"><option value="half">λ/2 (Half)</option><option value="quarter">λ/4 (Quarter)</option></select>
+        </div>
+        <div class="field"><label>Fast axis (°)</label><input type="number" id="wpAngle" value="0" step="1" min="0" max="180"></div>
+        <div class="field"><label>Waveplate T (%)</label><input type="number" id="wpT" value="99" step="1" min="0" max="100"></div>
+        <div class="field"><label title="Manual finding: laser output is horizontal linear, but mirrors + scanner rotate it ~11° by the time it reaches the stage. Re-measure whenever the laser or optics change.">Path Rotation (°)</label><input type="number" id="pathPolRotation" value="11" step="0.5" min="-90" max="90"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="justify-content:space-between;"><span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:#94a3b8"></span>Path Distance (mm)</span><button class="zbtn" id="reset-default" style="width:auto; padding:0 8px; font-size:10px;">Default</button></h2>
+      <div id="distance-controls"></div>
+      <div class="dual" id="distctl-scanstage" style="margin-top:4px; border-top:1px dashed var(--panel-border); padding-top:8px;">
+        <div class="lbl">Scanner–Stage Dist.</div>
+        <div class="row"><button class="stepbtn" data-step="-10" data-target="scanstage">−</button><input type="range" id="z-slider"><button class="stepbtn" data-step="10" data-target="scanstage">+</button><input type="number" id="z-num"></div>
+      </div>
+      <button class="btn-block" id="find-focus-btn" style="margin-top:8px;">🎯 Find Focus (set to f = 255mm)</button>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot" style="background:#f97316"></span>Loss Analysis</h2>
+      <div class="loss-list" id="loss-list"></div>
+    </div>
+  </div>
+
+  <div class="main-col">
+    <div class="stage-panel">
+      <div class="order-sidebar">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px;">Component Order</div>
+        <div id="component-list"></div>
+      </div>
+      <div class="diagram-area" style="position:relative;">
+        <button id="play-pause-btn" style="position:absolute; top:10px; left:10px; z-index:5; width:32px; height:32px; border-radius:8px; border:1.5px solid var(--outline); background:#fff; cursor:pointer; font-size:13px;">⏸</button>
+        <svg id="scene" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <div class="card" style="width:1024px; max-width:100%;">
+      <h2><span class="dot" style="background:#8b5cf6"></span>Beam Profile</h2>
+      <div class="profile-controls">
+        <button class="zbtn" id="zoom-out">−</button>
+        <button class="zbtn" id="zoom-in">+</button>
+        <button class="zbtn" id="zoom-reset" style="width:auto; padding:0 7px; font-size:10px;">Fit</button>
+        <span class="zoomlabel" id="zoom-label">±– μm</span>
+        <select id="colormap">
+          <option value="inferno">Inferno</option><option value="jet" selected>Jet</option>
+          <option value="viridis">Viridis</option><option value="gray">Gray</option>
+        </select>
+        <span style="flex:1"></span>
+        <span class="hint">Normalize (0–1)</span><div class="switch" id="normalize-toggle"></div>
+        <span class="hint">Guide lines</span><div class="switch on" id="guide-toggle"></div>
+        <span class="hint">3D</span><div class="switch" id="profile-3d-toggle"></div>
+      </div>
+      <canvas id="profileCanvas" width="1500" height="480"></canvas>
+      <div class="profile-controls" style="margin-top:8px; margin-bottom:0;">
+        <span class="hint">Download PNG:</span>
+        <button class="zbtn dl-btn" id="dl-beam" style="width:auto; padding:0 8px; font-size:10px;">Beam Profile</button>
+        <button class="zbtn dl-btn" id="dl-x" style="width:auto; padding:0 8px; font-size:10px;">X-profile</button>
+        <button class="zbtn dl-btn" id="dl-y" style="width:auto; padding:0 8px; font-size:10px;">Y-profile</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-sidebar">
+    <div class="block"><table class="result-table"><caption>SUMMARY</caption><tbody id="summary-table"></tbody></table></div>
+    <div class="block"><table class="result-table"><caption>STAGE PROCESSING INFO</caption><tbody id="stageinfo-table"></tbody></table></div>
+    <div class="block">
+      <div class="field"><label>Target Fluence (mJ/cm²)</label><input type="number" id="target-f" placeholder="e.g. 110" step="1"></div>
+      <table class="result-table" id="target-f-table" style="margin-top:8px; display:none;"><tbody></tbody></table>
+      <div class="target-status" id="target-f-status">Enter a value above.</div>
+    </div>
+    <div class="block">
+      <div class="field"><label>Target Spot ⌀ (μm)</label><input type="number" id="target-spot" placeholder="e.g. 300" step="1"></div>
+      <table class="result-table" id="target-spot-table" style="margin-top:8px; display:none;"><tbody></tbody></table>
+      <div class="target-status" id="target-spot-status">Enter a value above.</div>
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<script>
+/* ===================== 상수 ===================== */
+const CAL_LAMBDA=355, FOCAL_LENGTH_MM=255;
+const SCANNER_GAP_PX=100;
+const WAVELENGTHS={1064:{color:'#e63946'},532:{color:'#16a34a'},355:{color:'#8b5cf6'},266:{color:'#6d28d9'}};
+const COMP_LABEL={atten:'Atten.',shutter:'Shutter',m1:'M1',m2:'M2',bet:'BET',m3:'M3',m4:'M4',m5:'M5',waveplate:'Waveplate'};
+const COMPONENT_DEFS={
+  atten:{shape:'box', w:86, h:52, lines:['ATTEN.']},
+  shutter:{shape:'box', w:86, h:52, lines:['SHUTTER']},
+  m1:{shape:'mirror'}, m2:{shape:'mirror'},
+  bet:{shape:'box', w:104, h:56, lines:['BEAM','EXPANDER']},
+  m3:{shape:'mirror'}, m4:{shape:'mirror'}, m5:{shape:'mirror'},
+  waveplate:{shape:'plate', lines:[]},
+};
+// 고정 경로 형태: 각 미러가 진행방향을 어디로 꺾는지 + 그릴 때 tilt 각도(반사 기하로 계산됨)
+const MIRROR_TURN={
+  m1:{out:[0,1],  angle:45},   // right → down  ("\\")
+  m2:{out:[-1,0], angle:-45},  // down → left   ("/")
+  m3:{out:[0,1],  angle:-45},  // left → down   ("/")
+  m4:{out:[1,0],  angle:45},   // down → right  ("\\")
+  m5:{out:[0,1],  angle:45},   // right → down  ("\\")
+};
+const ORDER=['atten','shutter','m1','m2','bet','m3','m4','m5','waveplate']; // 고정 순서(물리 계산/리스트 표시용)
+const MIRROR_LEN=52, MIRROR_THICK=9;
+const PLATE_LEN=48, PLATE_THICK=7;
+const WP_SCANNER_GLUE_PX=22; // waveplate는 항상 scanner 바로 앞에 붙어서 배치 (거리 조절 불가)
+
+const state={
+  wavelength:355, pavg:3.5, reprate:50, pulsewidth:17, mSquared:1.2,
+  attT:80, betM:2.0, betT:98, mirrorR:99,
+  wpT:99, wpType:'half', wpAngle:0, pathPolRotation:11,
+  w0CalUm:96, // 사용자 실측 기반 캘리브레이션 (radius, μm @ CAL_LAMBDA, BET off) — UI에는 지름으로 입력받음
+  rawBeamDiaMm:8, divergenceMrad:2, // Huaray Poplar-355 스펙시트 (라벨: <8mm, ≤2mrad)
+  scanStageDist:360, // mm, scanner 출력~stage 실측 거리
+  active:{atten:true,shutter:true,m1:true,m2:true,bet:false,m3:true,m4:true,m5:true,waveplate:true},
+  pinned:{atten:true,shutter:true,m1:false,m2:false,bet:false,m3:false,m4:false,m5:false,waveplate:true},
+  dist:{atten:350, shutter:210, m1:330, m2:350, bet:380, m3:380, m4:300, m5:420, waveplate:270},
+  profileZoomUm:null, profile3D:false, profileColormap:'jet', profileGuide:true, profileNormalize:false
+};
+function hp_mm(){ return state.scanStageDist - FOCAL_LENGTH_MM; } // focal 기준 defocus (내부 계산용)
+
+/* ===================== 물리 계산 ===================== */
+function lambda_m(){ return state.wavelength*1e-9; }
+function w0_m(){
+  let w0=(state.w0CalUm*(state.wavelength/CAL_LAMBDA))*1e-6;
+  if(state.active.bet && state.betM>0) w0/=state.betM;
+  return w0;
+}
+function zR_m(){ const w0=w0_m(); return Math.PI*w0*w0/(lambda_m()*state.mSquared); }
+function theoreticalFocusDia_um(){
+  // Edmund Optics beam expander guide, Eq.11 diffraction term only (aberration term omitted — needs lens curvature/index not modeled here)
+  const f_m = FOCAL_LENGTH_MM/1000;
+  const D_I_m = (state.rawBeamDiaMm/1000) * (state.active.bet && state.betM>0 ? state.betM : 1);
+  if(D_I_m<=0) return NaN;
+  const phi_m = (4*lambda_m()*state.mSquared*f_m)/(Math.PI*D_I_m);
+  return phi_m*1e6; // diameter, μm
+}
+function w_at_z_m(z_mm){ const w0=w0_m(), zr=zR_m(), z=z_mm*1e-3; return w0*Math.sqrt(1+(z/zr)*(z/zr)); }
+function stepT(id){
+  if(id==='atten') return state.attT/100;
+  if(id==='shutter') return 0.995;
+  if(id==='bet') return state.betT/100;
+  if(id==='waveplate') return state.wpT/100;
+  return state.mirrorR/100;
+}
+function transmission(){
+  let T=1; ORDER.forEach(id=>{ if(state.active[id]) T*=stepT(id); }); return T;
+}
+function Pstage_W(){ return state.pavg*transmission(); }
+function Epulse_J(){ return Pstage_W()/(state.reprate*1e3); }
+function fluence_mJcm2(z_mm){
+  const w_cm=w_at_z_m(z_mm)*100, area=Math.PI*w_cm*w_cm;
+  return (2*Epulse_J()/area)*1000;
+}
+function requiredZ_mm(targetF){
+  const F_Jcm2=targetF/1000, E=Epulse_J(), w0=w0_m();
+  const w_needed_m=Math.sqrt(2*E/(Math.PI*F_Jcm2))/100;
+  if(w_needed_m<w0*0.999) return null;
+  const ratio=w_needed_m/w0;
+  return zR_m()*Math.sqrt(Math.max(ratio*ratio-1,0))*1000;
+}
+function requiredZ_from_spot_um(targetDiameterUm){
+  const w0_um=w0_m()*1e6;
+  const w_needed_um=targetDiameterUm/2;
+  if(w_needed_um<w0_um*0.999) return null;
+  const ratio=w_needed_um/w0_um;
+  return zR_m()*Math.sqrt(Math.max(ratio*ratio-1,0))*1000;
+}
+function outputPolarizationLabel(){
+  // 매뉴얼 실측: laser 출력은 수평 선편광이지만 미러+scanner를 거치며 stage 도달 시 약 11° 기생 회전(광학계마다 재측정 필요)
+  if(!state.active.waveplate) return `${state.pathPolRotation.toFixed(0)}° (mirrors/scanner only, no WP)`;
+  if(state.wpType==='half') return ((2*state.wpAngle+state.pathPolRotation+360)%180).toFixed(0)+'° (linear)';
+  return `circular/elliptical (QWP) + ${state.pathPolRotation.toFixed(0)}° path rotation`;
+}
+function cumulativeAt(id){
+  if(id==='laser') return 1;
+  let T=1;
+  for(const oid of ORDER){
+    if(state.active[oid]) T*=stepT(oid);
+    if(oid===id) return T;
+  }
+  return T;
+}
+function lossChain(){
+  let P=state.pavg;
+  const rows=[{label:'Laser Output',T:null,P}];
+  ORDER.forEach(id=>{
+    if(!state.active[id]) return;
+    const T=stepT(id); P*=T;
+    rows.push({label:COMP_LABEL[id],T,P});
+  });
+  rows.push({label:'Reached Stage',T:null,P,final:true});
+  return rows;
+}
+
+/* ===================== 색상 / 컬러맵 ===================== */
+function shade(hex,percent){
+  let f=parseInt(hex.slice(1),16), t=percent<0?0:255, p=Math.abs(percent)/100;
+  let R=f>>16,G=(f>>8)&0xFF,B=f&0xFF;
+  return "#"+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
+}
+function currentColor(){ return WAVELENGTHS[state.wavelength].color; }
+function lerpStops(t,stops){
+  t=Math.max(0,Math.min(1,t));
+  for(let i=0;i<stops.length-1;i++){
+    const [t0,c0]=stops[i], [t1,c1]=stops[i+1];
+    if(t>=t0 && t<=t1){ const f=(t-t0)/(t1-t0);
+      return [Math.round(c0[0]+(c1[0]-c0[0])*f),Math.round(c0[1]+(c1[1]-c0[1])*f),Math.round(c0[2]+(c1[2]-c0[2])*f)];
+    }
+  }
+  return stops[stops.length-1][1];
+}
+function cmapRGB(t){
+  const maps={
+    inferno:[[0,[6,6,22]],[0.25,[85,10,120]],[0.5,[190,35,95]],[0.75,[250,140,35]],[1,[255,250,225]]],
+    jet:[[0,[0,0,128]],[0.11,[0,0,255]],[0.34,[0,255,255]],[0.5,[0,255,0]],[0.65,[255,255,0]],[0.78,[255,128,0]],[0.89,[255,0,0]],[1,[128,0,0]]],
+    viridis:[[0,[68,1,84]],[0.33,[59,82,139]],[0.66,[33,144,141]],[1,[253,231,37]]],
+    gray:[[0,[10,10,10]],[1,[255,255,255]]],
+  };
+  return lerpStops(t, maps[state.profileColormap]||maps.jet);
+}
+
+/* ===================== 레이아웃 (고정 형태, 컴포넌트 on/off와 무관) ===================== */
+function mmToPx(mm){ return Math.max(90, Math.min(320, mm*0.55)); }
+function computeLayout(){
+  const pos={ laser:{x:90,y:100} };
+  let cur=pos.laser, dir=[1,0];
+  ['atten','shutter','m1','m2','bet','m3','m4','m5'].forEach(id=>{
+    const px=mmToPx(state.dist[id]);
+    const p={x:cur.x+dir[0]*px, y:cur.y+dir[1]*px};
+    pos[id]=p; pos[id]._dir=dir.slice();
+    if(MIRROR_TURN[id]) dir=MIRROR_TURN[id].out.slice();
+    cur=p;
+  });
+  // scanner: M5에서 "M5-Scanner" 거리(dist.waveplate 슬라이더)만큼 이동
+  const scannerPx=mmToPx(state.dist.waveplate);
+  pos.scanner={x:cur.x+dir[0]*scannerPx, y:cur.y+dir[1]*scannerPx};
+  pos.scanner._dir=dir.slice();
+  // waveplate: scanner 바로 앞(고정 간격)에 항상 붙여서 배치
+  pos.waveplate={x:pos.scanner.x-dir[0]*WP_SCANNER_GLUE_PX, y:pos.scanner.y-dir[1]*WP_SCANNER_GLUE_PX};
+  pos.waveplate._dir=dir.slice();
+  return pos;
+}
+
+/* ===================== SVG 그리기 ===================== */
+const svgNS="http://www.w3.org/2000/svg";
+const scene=document.getElementById('scene');
+let gradId=0;
+function el(tag,attrs){ const e=document.createElementNS(svgNS,tag); Object.keys(attrs).forEach(k=>e.setAttribute(k,attrs[k])); return e; }
+
+function drawMirror(parent,cx,cy,angle){
+  gradId++; const gid='m'+gradId;
+  const defs=scene.querySelector('defs');
+  const grad=el('linearGradient',{id:gid,x1:'0',y1:'0',x2:'0',y2:'1'});
+  grad.appendChild(el('stop',{offset:'0%','stop-color':'#eaf6ff'}));
+  grad.appendChild(el('stop',{offset:'100%','stop-color':'#a9d8f0'}));
+  defs.appendChild(grad);
+  const rect=el('rect',{x:cx-MIRROR_LEN/2,y:cy-MIRROR_THICK/2,width:MIRROR_LEN,height:MIRROR_THICK,rx:2,
+    fill:`url(#${gid})`,stroke:'var(--outline)','stroke-width':2,
+    transform:`rotate(${angle} ${cx} ${cy})`});
+  parent.appendChild(rect);
+}
+function drawPlate(parent,cx,cy,dir){
+  const vertical = dir[0]===0;
+  const w = vertical? PLATE_LEN : PLATE_THICK;
+  const h = vertical? PLATE_THICK : PLATE_LEN;
+  gradId++; const gid='p'+gradId;
+  const defs=scene.querySelector('defs');
+  const grad=el('linearGradient',{id:gid,x1:'0',y1:'0',x2: vertical?'1':'0', y2: vertical?'0':'1'});
+  grad.appendChild(el('stop',{offset:'0%','stop-color':'#fbeaf3'}));
+  grad.appendChild(el('stop',{offset:'100%','stop-color':'#d8b7c8'}));
+  defs.appendChild(grad);
+  parent.appendChild(el('rect',{x:cx-w/2,y:cy-h/2,width:w,height:h,rx:2,fill:`url(#${gid})`,stroke:'var(--outline)','stroke-width':2}));
+}
+function drawBox(parent,cx,cy,w0,h0,dir,active,lines){
+  const vertical = dir[0]===0;
+  const w = vertical? h0:w0, h = vertical? w0:h0;
+  gradId++; const gid='b'+gradId;
+  const defs=scene.querySelector('defs');
+  const grad=el('linearGradient',{id:gid,x1:'0',y1:'0',x2:'0',y2:'1'});
+  grad.appendChild(el('stop',{offset:'0%','stop-color': active? '#f1f2f5':'#eceef2'}));
+  grad.appendChild(el('stop',{offset:'100%','stop-color': active? '#c7cbd4':'#dfe2e8'}));
+  defs.appendChild(grad);
+  parent.appendChild(el('rect',{x:cx-w/2,y:cy-h/2,width:w,height:h,rx:8,fill:`url(#${gid})`,stroke:'var(--outline)','stroke-width':2.2}));
+  const totalH=lines.length*17;
+  lines.forEach((ln,i)=>{
+    const t=el('text',{x:cx,y:cy-totalH/2+13+i*17,'text-anchor':'middle','font-family':'Pretendard,sans-serif','font-weight':'800','font-size':13.5,fill: active?'#181b26':'#9aa1b4'});
+    t.textContent=ln; parent.appendChild(t);
+  });
+}
+function drawLabel(parent,cx,cy,text,dir){
+  // dir: 'up'(기본) | 'right' | 'left' — 도형과의 간섭을 피하기 위한 배치 방향
+  dir=dir||'up';
+  let x=cx,y=cy,anchor='middle';
+  if(dir==='up'){ y=cy-24; }
+  else if(dir==='right'){ x=cx+30; y=cy+4; anchor='start'; }
+  else if(dir==='left'){ x=cx-30; y=cy+4; anchor='end'; }
+  const t=el('text',{x,y,'text-anchor':anchor,'font-family':'Pretendard,sans-serif','font-weight':'800','font-size':13.5,fill:'#374151'});
+  t.textContent=text; parent.appendChild(t);
+}
+
+function makeMiniProfileImage(size){
+  const oversample=3;
+  const px=size*oversample;
+  const c=document.createElement('canvas'); c.width=px; c.height=px;
+  const ctx=c.getContext('2d');
+  const wUm=w_at_z_m(hp_mm())*1e6;
+  const viewHalf=Math.max(20,wUm*2.6);
+  const scaleF=intensityScaleFactor();
+  const img=ctx.createImageData(px,px);
+  for(let py=0;py<px;py++){
+    for(let pxi=0;pxi<px;pxi++){
+      const xUm=(pxi/px-0.5)*2*viewHalf, yUm=(py/px-0.5)*2*viewHalf;
+      const r2=xUm*xUm+yUm*yUm;
+      const inten=Math.exp(-2*r2/(wUm*wUm))*scaleF;
+      const [r,g,b]=cmapRGB(inten);
+      const idx=(py*px+pxi)*4;
+      img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const niceVals=[1,2,5,10,20,50,100,200,500,1000,2000];
+  let barUm=niceVals[0];
+  for(const v of niceVals){ if(v<=viewHalf*2*0.32) barUm=v; }
+  const barPx=(barUm/(2*viewHalf))*px;
+  const bx=px*0.08, by=px*0.92;
+  ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2,px*0.012);
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+barPx,by); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font=`${Math.round(px*0.06)}px JetBrains Mono, monospace`;
+  ctx.fillText(barUm+' μm', bx, by-px*0.02);
+  return c.toDataURL('image/png');
+}
+
+function buildScene(){
+  scene.innerHTML='';
+  const defs=el('defs',{});
+  defs.innerHTML=`<filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="stageGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c3c8d2"/><stop offset="100%" stop-color="#6b7280"/></linearGradient>`;
+  scene.appendChild(defs);
+
+  const pos=computeLayout();
+  const col=currentColor();
+  const scannerW=124, scannerH=76;
+  const scannerBottom={x:pos.scanner.x, y:pos.scanner.y+scannerH/2};
+
+  const scanScale=0.55; // px per mm, scanner-stage 축과 focal length 표시에 공통 사용
+  const focalY=scannerBottom.y+FOCAL_LENGTH_MM*scanScale;
+  const stageX=scannerBottom.x;
+  const stageY=scannerBottom.y+state.scanStageDist*scanScale;
+  const stageW=210, stageH=20;
+  const w_um=w_at_z_m(hp_mm())*1e6;
+  const spotHalfPx=Math.max(3,Math.min(34,3+(w_um/state.w0CalUm-1)*7));
+
+  // bounds
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  Object.keys(pos).forEach(k=>{
+    minX=Math.min(minX,pos[k].x-70); maxX=Math.max(maxX,pos[k].x+70);
+    minY=Math.min(minY,pos[k].y-70); maxY=Math.max(maxY,pos[k].y+70);
+  });
+  minX=Math.min(minX, stageX-stageW/2-500);
+  maxX=Math.max(maxX, stageX+stageW/2+120);
+  maxY=Math.max(maxY, stageY+stageH+50, focalY+150);
+  const pad=20;
+  scene.setAttribute('viewBox',`${minX-pad} ${minY-pad} ${maxX-minX+pad*2} ${maxY-minY+pad*2}`);
+  scene.setAttribute('preserveAspectRatio','xMidYMid meet');
+
+  // 빔 경로: 항상 laser→atten→shutter→m1→m2→bet→m3→m4→m5→wp→scanner 전체를 고정으로 그림 — on/off는 아이콘만 빼고 경로선은 항상 유지
+  const chainIds=['laser','atten','shutter','m1','m2','bet','m3','m4','m5','waveplate','scanner'];
+  const chainPts=chainIds.map(id=> id==='scanner'? scannerBottom : pos[id]);
+  for(let i=0;i<chainIds.length-1;i++){
+    const a=chainPts[i], b=chainPts[i+1];
+    const cumT=cumulativeAt(chainIds[i]);
+    const op=0.6+0.35*cumT;
+    scene.appendChild(el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y, stroke:col,'stroke-width':7,'stroke-linecap':'round', opacity:op}));
+  }
+
+  // Scanner → Stage: converge → F → diverge (image3 스타일), 항상 전체 원뿔 표시
+  const ap=30;
+  const coneLen=focalY-scannerBottom.y;
+  const endY=Math.max(stageY, focalY+coneLen*0.55);
+  const ap2=ap*(endY-focalY)/coneLen;
+  scene.appendChild(el('path',{d:`M ${scannerBottom.x-ap},${scannerBottom.y} L ${scannerBottom.x+ap},${scannerBottom.y} L ${scannerBottom.x},${focalY} Z`, fill:col, opacity:0.16}));
+  scene.appendChild(el('path',{d:`M ${scannerBottom.x},${focalY} L ${scannerBottom.x-ap2},${endY} L ${scannerBottom.x+ap2},${endY} Z`, fill:col, opacity:0.16}));
+  scene.appendChild(el('line',{x1:scannerBottom.x-70,x2:scannerBottom.x+70,y1:focalY,y2:focalY, stroke:'#c3c8d4','stroke-width':1.5,'stroke-dasharray':'5 5'}));
+  scene.appendChild(el('circle',{cx:scannerBottom.x,cy:focalY,r:4,fill:'#111'}));
+  // F 라벨: stage 폭 바깥쪽 고정 위치라 stage가 움직여도 절대 안 겹침
+  const fLbl=el('text',{x:stageX+stageW/2+26,y:focalY+6,fill:'#374151','font-size':13.5,'font-weight':'800','font-family':'Pretendard, sans-serif'});
+  fLbl.textContent='F (focus)'; scene.appendChild(fLbl);
+
+  // laser (fixed anchor, drawn as box)
+  drawBox(scene,pos.laser.x,pos.laser.y,100,54,[1,0],true,['LASER']);
+
+  // 컴포넌트들 (on/off는 아이콘 표시 여부만 결정, 위치/경로는 고정)
+  ORDER.forEach(id=>{
+    const active=state.active[id];
+    const def=COMPONENT_DEFS[id];
+    const p=pos[id], dir=p._dir;
+    if(!active) return;
+    if(def.shape==='mirror'){
+      drawMirror(scene,p.x,p.y,MIRROR_TURN[id].angle);
+      const dir2 = id==='m2'? 'right' : (id==='m4'? 'left' : 'up');
+      drawLabel(scene,p.x,p.y,id.toUpperCase(),dir2);
+    } else if(def.shape==='plate'){
+      drawPlate(scene,p.x,p.y,dir);
+    } else {
+      drawBox(scene,p.x,p.y,def.w,def.h,dir,true,def.lines);
+      let extra='';
+      if(extra) drawLabel(scene,p.x,p.y,extra);
+    }
+  });
+
+  // scanner (fixed) — "(dummy)" 라인/부가 텍스트 제거
+  drawBox(scene,pos.scanner.x,pos.scanner.y,scannerW,scannerH,pos.scanner._dir,true,['SCANNER']);
+
+  // stage (plain rectangle, no legs) — 라벨은 항상 도형 우측, 도형과 같이 움직임
+  scene.appendChild(el('rect',{x:stageX-stageW/2,y:stageY,width:stageW,height:stageH,rx:6,fill:'url(#stageGrad)',stroke:'var(--outline)','stroke-width':2.4}));
+  const stLbl=el('text',{x:stageX,y:stageY+stageH/2+5,'text-anchor':'middle','font-family':'Pretendard,sans-serif','font-weight':'800','font-size':12,fill:'#1f2430'});
+  stLbl.textContent='STAGE'; scene.appendChild(stLbl);
+
+  // 미니 beam profile (정사각형, 확대, 좌측 하단 고정 위치)
+  const thumbSize=260;
+  const thumbX=minX+30, thumbY=maxY-thumbSize-30;
+  scene.appendChild(el('rect',{x:thumbX-5,y:thumbY-5,width:thumbSize+10,height:thumbSize+10,rx:7,fill:'#fff',stroke:'#000','stroke-width':2.5}));
+  const img=el('image',{x:thumbX,y:thumbY,width:thumbSize,height:thumbSize});
+  img.setAttributeNS('http://www.w3.org/1999/xlink','href', makeMiniProfileImage(thumbSize));
+  scene.appendChild(img);
+  const thumbLbl=el('text',{x:thumbX+thumbSize/2,y:thumbY+thumbSize+22,'text-anchor':'middle','font-size':13.5,fill:'#6b7280','font-family':'Pretendard, sans-serif','font-weight':'700'});
+  thumbLbl.textContent='Beam Profile @ Stage'; scene.appendChild(thumbLbl);
+
+  // pulse indicator (붉은 테두리)
+  scene._chainPts=chainPts;
+  scene._hgEnd={x:stageX,y:stageY+2};
+  const pulse=el('circle',{id:'beamPulseIndicator', r:5.6, fill:'#ffffff', stroke:'#dc2626','stroke-width':2.24, filter:'url(#glow)'});
+  scene.appendChild(pulse);
+}
+
+/* ===================== 애니메이션 ===================== */
+let animPlaying=true;
+function getFullPath(){
+  const pts=scene._chainPts.slice().map(p=>[p.x,p.y]);
+  pts.push([scene._hgEnd.x, scene._hgEnd.y]);
+  return pts;
+}
+function segLen(a,b){ return Math.hypot(b[0]-a[0],b[1]-a[1]); }
+function animate(ts){
+  if(!scene._chainPts || !animPlaying){ requestAnimationFrame(animate); return; }
+  const pts=getFullPath();
+  let total=0; const lens=[];
+  for(let i=0;i<pts.length-1;i++){ const l=segLen(pts[i],pts[i+1]); lens.push(l); total+=l; }
+  const speed=230, dur=Math.max(total/speed,0.6);
+  const t=((ts/1000)%dur)/dur;
+  let target=t*total, seg=0;
+  while(seg<lens.length && target>lens[seg]){ target-=lens[seg]; seg++; }
+  if(seg>=lens.length) seg=lens.length-1;
+  const a=pts[seg], b=pts[seg+1]||pts[seg];
+  const st=lens[seg]?target/lens[seg]:0;
+  const x=a[0]+(b[0]-a[0])*st, y=a[1]+(b[1]-a[1])*st;
+  const dotEl=document.getElementById('beamPulseIndicator');
+  if(dotEl){ dotEl.setAttribute('cx',x); dotEl.setAttribute('cy',y); }
+  requestAnimationFrame(animate);
+}
+
+/* ===================== Beam Profile 패널 ===================== */
+function autoFitZoom(){ return Math.max(30, w_at_z_m(hp_mm())*1e6*3.2); }
+let profileRegions={};
+function downloadProfileRegion(key, filename){
+  const region=profileRegions[key];
+  if(!region) return;
+  const canvas=document.getElementById('profileCanvas');
+  const temp=document.createElement('canvas');
+  temp.width=Math.round(region.w); temp.height=Math.round(region.h);
+  const tctx=temp.getContext('2d');
+  tctx.fillStyle='#ffffff'; tctx.fillRect(0,0,temp.width,temp.height);
+  tctx.drawImage(canvas, region.x, region.y, region.w, region.h, 0,0, region.w, region.h);
+  const a=document.createElement('a');
+  a.download=filename+'.png';
+  a.href=temp.toDataURL('image/png');
+  a.click();
+}
+function fitCanvasToDisplay(canvas){
+  const dpr=Math.min(window.devicePixelRatio||1, 2.5);
+  const cssW=canvas.clientWidth, cssH=canvas.clientHeight;
+  if(cssW<=0||cssH<=0) return;
+  const targetW=Math.round(cssW*dpr), targetH=Math.round(cssH*dpr);
+  if(canvas.width!==targetW || canvas.height!==targetH){ canvas.width=targetW; canvas.height=targetH; }
+}
+function intensityScaleFactor(){
+  if(state.profileNormalize) return 1;
+  const w0=w0_m(), wz=w_at_z_m(hp_mm());
+  return (w0/wz)*(w0/wz); // 초점 대비 실제 peak intensity 비율 (defocus되면 1보다 작아짐)
+}
+function renderProfile(){
+  const canvas=document.getElementById('profileCanvas');
+  fitCanvasToDisplay(canvas);
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const wUm=w_at_z_m(hp_mm())*1e6;
+  const scaleF=intensityScaleFactor();
+  if(state.profileZoomUm===null) state.profileZoomUm=autoFitZoom();
+  const viewHalf=state.profileZoomUm;
+  document.getElementById('zoom-label').textContent=`±${viewHalf.toFixed(0)} μm`;
+  ctx.clearRect(0,0,W,H);
+
+  // ---- 레이아웃: [heatmap 또는 3D][colorbar]   [X-profile]
+  //                                              [Y-profile]
+  // ---- 레이아웃: [colorbar][heatmap 또는 3D]   [X-profile]
+  //                                              [Y-profile]
+  const pad=22;
+  const size=H-pad*2;               // 정사각형 윈도우 — 우측 X/Y profile 합친 높이와 동일하게 꽉 채움. 3D 토글은 이 영역에만 적용
+  const cbW=20, cbX=pad;
+  const hx=cbX+cbW+52, hy=pad;
+  const rightX=hx+size+50, rightW=W-rightX-pad;
+  const gap=24;
+  const rightH=(H-pad*2-gap)/2;
+
+  if(!state.profile3D){
+    // heatmap (top view)
+    const imgSize=Math.round(size);
+    const img=ctx.createImageData(imgSize,imgSize);
+    for(let py=0;py<imgSize;py++){
+      for(let px=0;px<imgSize;px++){
+        const xUm=(px/imgSize-0.5)*2*viewHalf, yUm=(py/imgSize-0.5)*2*viewHalf;
+        const r2=xUm*xUm+yUm*yUm;
+        const inten=Math.exp(-2*r2/(wUm*wUm))*scaleF;
+        const [r,g,b]=cmapRGB(inten);
+        const idx=(py*imgSize+px)*4;
+        img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255;
+      }
+    }
+    ctx.putImageData(img,hx,hy);
+    ctx.strokeStyle='#333844'; ctx.lineWidth=1.5; ctx.strokeRect(hx,hy,size,size);
+
+    if(state.profileGuide){
+      ctx.setLineDash([7,6]);
+      ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(hx,hy+size/2); ctx.lineTo(hx+size,hy+size/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hx+size/2,hy); ctx.lineTo(hx+size/2,hy+size); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    const niceVals=[1,2,5,10,20,50,100,200,500,1000,2000];
+    let barUm=niceVals[0];
+    for(const v of niceVals){ if(v<=viewHalf*2*0.32) barUm=v; }
+    const barPx=(barUm/(2*viewHalf))*size;
+    const bx=hx+16, by=hy+size-20;
+    ctx.strokeStyle='#fff'; ctx.lineWidth=3.5;
+    ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+barPx,by); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='700 20px JetBrains Mono, monospace';
+    ctx.fillText(barUm+' μm', bx, by-10);
+  } else {
+    // isometric 3D surface — 정사각형 윈도우 안에만 그림
+    const N=36, originX=hx+size/2, originY=hy+size*0.86, baseSize=size*0.4, heightScale=size*0.32;
+    const pts=[];
+    for(let iy=0;iy<=N;iy++){
+      const row=[];
+      for(let ix=0;ix<=N;ix++){
+        const xUm=-viewHalf+(2*viewHalf)*(ix/N), yUm=-viewHalf+(2*viewHalf)*(iy/N);
+        const r2=xUm*xUm+yUm*yUm;
+        const inten=Math.exp(-2*r2/(wUm*wUm))*scaleF;
+        const gxN=xUm/viewHalf, gyN=yUm/viewHalf;
+        const isoX=originX+(gxN-gyN)*Math.cos(Math.PI/6)*baseSize;
+        const isoY=originY+(gxN+gyN)*Math.sin(Math.PI/6)*baseSize - inten*heightScale;
+        row.push({x:isoX,y:isoY,inten});
+      }
+      pts.push(row);
+    }
+    ctx.save();
+    ctx.strokeStyle='#333844'; ctx.lineWidth=1.5; ctx.strokeRect(hx,hy,size,size);
+    ctx.lineWidth=1;
+    for(let iy=0;iy<=N;iy++){
+      for(let ix=0;ix<=N;ix++){
+        const p=pts[iy][ix];
+        if(ix<N){ const q=pts[iy][ix+1]; const [r,g,b]=cmapRGB((p.inten+q.inten)/2); ctx.strokeStyle=`rgb(${r},${g},${b})`; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }
+        if(iy<N){ const q=pts[iy+1][ix]; const [r,g,b]=cmapRGB((p.inten+q.inten)/2); ctx.strokeStyle=`rgb(${r},${g},${b})`; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }
+      }
+    }
+    ctx.restore();
+  }
+
+  // colorbar (항상 표시)
+  for(let py=0;py<size;py++){
+    const t=1-py/size;
+    const [r,g,b]=cmapRGB(t);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.fillRect(cbX,hy+py,cbW,1);
+  }
+  ctx.strokeStyle='#333844'; ctx.lineWidth=1.5; ctx.strokeRect(cbX,hy,cbW,size);
+  ctx.fillStyle='#374151'; ctx.font='700 17px JetBrains Mono, monospace'; ctx.textAlign='left';
+  ctx.fillText('1.0', cbX+cbW+6, hy+14);
+  ctx.fillText('0.0', cbX+cbW+6, hy+size);
+  ctx.save(); ctx.translate(cbX+cbW+26, hy+size/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.font='700 19px Pretendard, sans-serif';
+  ctx.fillText(state.profileNormalize? 'Normalized Intensity' : 'Relative Intensity (vs. focus peak)', 0, 0); ctx.restore();
+
+  // X / Y cross-section 패널 (항상 표시, 3D 토글 영향 없음)
+  drawColoredCrossSection(ctx, rightX, pad, rightW, rightH, wUm, viewHalf, scaleF, 'X', 'x');
+  drawColoredCrossSection(ctx, rightX, pad+rightH+gap, rightW, rightH, wUm, viewHalf, scaleF, 'Y', 'y');
+
+  profileRegions = {
+    beam_profile:{x:cbX-2,y:hy-2,w:(hx+size-cbX)+4,h:size+4},
+    x_profile:{x:rightX,y:pad,w:rightW,h:rightH},
+    y_profile:{x:rightX,y:pad+rightH+gap,w:rightW,h:rightH},
+  };
+}
+function drawColoredCrossSection(ctx, ox, oy, w, h, wUm, viewHalf, scaleF, axisLabel, axisKey){
+  const padL=8,padR=8,padT=28,padB=34;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  ctx.strokeStyle='#333844'; ctx.lineWidth=1;
+  ctx.strokeRect(ox+padL,oy+padT,plotW,plotH);
+  const N=160;
+  let prevX=null, prevY=null, prevInten=null;
+  ctx.lineWidth=3;
+  for(let i=0;i<=N;i++){
+    const u=-viewHalf+(2*viewHalf)*(i/N);
+    const inten=Math.exp(-2*(u*u)/(wUm*wUm))*scaleF;
+    const px=ox+padL+plotW*(i/N);
+    const py=oy+padT+plotH*(1-inten);
+    if(prevX!==null){
+      const [r,g,b]=cmapRGB((inten+prevInten)/2);
+      ctx.strokeStyle=`rgb(${r},${g},${b})`;
+      ctx.beginPath(); ctx.moveTo(prevX,prevY); ctx.lineTo(px,py); ctx.stroke();
+    }
+    prevX=px; prevY=py; prevInten=inten;
+  }
+  // x축 눈금 (위치, μm 단위)
+  const niceStep = (()=>{ const cands=[10,20,25,50,100,150,200,250,500,1000]; for(const c of cands){ if((2*viewHalf)/c<=6) return c; } return 1000; })();
+  ctx.strokeStyle='#9aa1b4'; ctx.fillStyle='#6b7280'; ctx.font='600 13px JetBrains Mono, monospace'; ctx.textAlign='center'; ctx.lineWidth=1;
+  for(let v=Math.ceil(-viewHalf/niceStep)*niceStep; v<=viewHalf; v+=niceStep){
+    const tx=ox+padL+plotW*((v+viewHalf)/(2*viewHalf));
+    ctx.beginPath(); ctx.moveTo(tx,oy+padT+plotH); ctx.lineTo(tx,oy+padT+plotH+5); ctx.stroke();
+    ctx.fillText(v.toFixed(0), tx, oy+padT+plotH+20);
+  }
+  ctx.font='600 12px Pretendard, sans-serif';
+  ctx.fillText(axisKey+' position (μm)', ox+padL+plotW/2, oy+padT+plotH+33);
+  ctx.fillStyle='#374151'; ctx.font='700 20px Pretendard, sans-serif'; ctx.textAlign='left';
+  ctx.fillText(`${axisLabel}-profile  (${axisKey}: ±${viewHalf.toFixed(0)} μm)`, ox+padL, oy+padT-10);
+}
+
+/* ===================== Component Order 리스트 (고정 형태, on/off만) ===================== */
+function renderComponentList(){
+  const wrap=document.getElementById('component-list');
+  const rows=['laser',...ORDER,'scanner','stage'];
+  wrap.innerHTML = rows.map((id,i)=>{
+    if(id==='laser'||id==='scanner'||id==='stage'){
+      return `<div class="list-row fixed"><span class="row-num">${i}.</span><span class="pin-btn unpinned">📌</span><span class="comp-name">${id.toUpperCase()}</span><span></span></div>`;
+    }
+    const active=state.active[id], pinned=state.pinned[id];
+    return `<div class="list-row${active?'':' inactive'}"><span class="row-num">${i}.</span><span class="pin-btn${pinned?'':' unpinned'}" data-pin="${id}">📌</span><span class="comp-name">${COMP_LABEL[id]}</span><div class="switch sm ${active?'on':''}" data-id="${id}"></div></div>`;
+  }).join('');
+  wrap.querySelectorAll('.switch[data-id]').forEach(sw=>{
+    sw.addEventListener('click', ()=>{
+      const id=sw.dataset.id; state.active[id]=!state.active[id];
+      renderComponentList(); updateComponentValueStates(); updateDistanceLabels(); render();
+    });
+  });
+  wrap.querySelectorAll('.pin-btn[data-pin]').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      const id=p.dataset.pin; state.pinned[id]=!state.pinned[id];
+      renderComponentList();
+    });
+  });
+}
+function updateComponentValueStates(){
+  const betOn=state.active.bet;
+  ['field-betM','field-betT'].forEach(fid=>{
+    const f=document.getElementById(fid);
+    f.style.opacity = betOn? '1':'0.4';
+    f.querySelector('input').disabled = !betOn;
+  });
+}
+
+/* ===================== 거리 컨트롤 ===================== */
+function bindDual(sliderId,numberId,{min,max,sliderStep,numStep,get,set,onChange}){
+  const cb = onChange || render;
+  const s=document.getElementById(sliderId), n=document.getElementById(numberId);
+  s.min=min; s.max=max; s.step=sliderStep; n.min=min; n.max=max; n.step=numStep;
+  s.value=get(); n.value=get();
+  s.addEventListener('input', ()=>{ set(parseFloat(s.value)); n.value=s.value; cb(); });
+  n.addEventListener('input', ()=>{
+    let v=parseFloat(n.value); if(isNaN(v)) return;
+    v=Math.min(max,Math.max(min,v)); set(v); s.value=v; cb();
+  });
+}
+function bindStepButtons(){
+  document.querySelectorAll('.stepbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target=btn.dataset.target, delta=parseFloat(btn.dataset.step);
+      const s=document.getElementById(target==='scanstage'? 'z-slider':`ds-${target}`);
+      const n=document.getElementById(target==='scanstage'? 'z-num':`dn-${target}`);
+      let v=parseFloat(n.value)+delta;
+      v=Math.min(parseFloat(n.max),Math.max(parseFloat(n.min),v));
+      n.value=v; s.value=v;
+      n.dispatchEvent(new Event('input'));
+    });
+  });
+}
+const DIST_IDS=['atten','shutter','m1','m2','bet','m3','m4','m5','waveplate'];
+const DIST_LABELS={
+  atten:'Laser-Atten.', shutter:'Atten.-Shutter', m1:'Shutter-M1', m2:'M1-M2',
+  bet:'M2-BET', m3:'BET-M3', m4:'M3-M4', m5:'M4-M5', waveplate:'M5-Scanner'
+};
+const DEFAULT_DIST={atten:350, shutter:210, m1:330, m2:350, bet:380, m3:380, m4:300, m5:420, waveplate:270};
+const DEFAULT_SCAN_STAGE=360;
+function buildDistanceControls(){
+  const wrap=document.getElementById('distance-controls');
+  wrap.innerHTML='';
+  DIST_IDS.forEach(id=>{
+    const box=document.createElement('div'); box.className='dual'; box.id='distctl-'+id;
+    box.innerHTML=`<div class="lbl" id="distlbl-${id}">${DIST_LABELS[id]}</div>
+      <div class="row">
+        <button class="stepbtn" data-step="-10" data-target="${id}">−</button>
+        <input type="range" id="ds-${id}">
+        <button class="stepbtn" data-step="10" data-target="${id}">+</button>
+        <input type="number" id="dn-${id}">
+      </div>`;
+    wrap.appendChild(box);
+    bindDual(`ds-${id}`,`dn-${id}`,{ min:30,max:800,sliderStep:10,numStep:1, get:()=>state.dist[id], set:v=>state.dist[id]=v, onChange:buildScene });
+  });
+  updateDistanceLabels();
+}
+function resetDistanceDefaults(){
+  DIST_IDS.forEach(id=>{ state.dist[id]=DEFAULT_DIST[id]; });
+  state.scanStageDist=DEFAULT_SCAN_STAGE;
+  DIST_IDS.forEach(id=>{
+    document.getElementById(`ds-${id}`).value=state.dist[id];
+    document.getElementById(`dn-${id}`).value=state.dist[id];
+  });
+  document.getElementById('z-slider').value=state.scanStageDist;
+  document.getElementById('z-num').value=state.scanStageDist;
+  render();
+}
+function updateDistanceLabels(){
+  const betOn=state.active.bet;
+  document.getElementById('distlbl-bet').textContent = betOn? 'M2-BET' : 'M2-M3';
+  const m3ctl=document.getElementById('distctl-m3');
+  m3ctl.style.opacity = betOn? '1':'0.35';
+  document.getElementById('ds-m3').disabled = !betOn;
+  document.getElementById('dn-m3').disabled = !betOn;
+}
+
+/* ===================== UI ===================== */
+function fmt(n,d){ return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function renderLoss(){
+  const rows=lossChain();
+  const wrap=document.getElementById('loss-list');
+  wrap.innerHTML='';
+  rows.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='loss-row'+(r.final?' final':'');
+    const tTxt=r.T===null?'':`<span class="mono" style="color:var(--muted)">×${r.T.toFixed(3)}</span>`;
+    d.innerHTML=`<span>${r.label}</span><span class="mono">${tTxt} ${r.P.toFixed(2)} W</span>`;
+    wrap.appendChild(d);
+  });
+}
+function renderSummaryTable(){
+  const w_um=w_at_z_m(hp_mm())*1e6;
+  const rows=[
+    ['λ / Power', `${state.wavelength}nm / ${state.pavg}W`, 'Laser wavelength and average power set in Laser Source.'],
+    ['Rep Rate', `${state.reprate} kHz`, 'Pulse repetition rate set in Laser Source.'],
+    ['Total T', `${(transmission()*100).toFixed(1)}%`, 'Product of every active component\'s transmission (Atten. × Shutter × mirrors × BET × Waveplate).'],
+    ['Power @ Stage', `${Pstage_W().toFixed(2)} W`, 'P_avg × Total T — power remaining after all losses, right before the stage.'],
+    ['Pulse Energy', `${(Epulse_J()*1e6).toFixed(2)} µJ`, 'Power @ Stage ÷ Rep Rate — energy delivered per pulse.'],
+    ['Spot ⌀', `${(w_um*2).toFixed(1)} μm`, '1/e² beam diameter at the stage: 2·w0\'·sqrt(1+(h_p/z_R)²). Grows as h_p moves away from 0.'],
+    ['Scanner–Stage', `${state.scanStageDist.toFixed(1)} mm`, 'The physical distance you set with the Scanner–Stage Dist. control.'],
+    ['h<sub>p</sub> (defocus)', `${hp_mm().toFixed(2)} mm`, 'h_p = Scanner–Stage distance − focal length (255mm). h_p = 0 means the stage sits exactly at the focal point F; positive/negative means the stage is past/before F.'],
+    ['Fluence', `${fluence_mJcm2(hp_mm()).toFixed(1)} mJ/cm²`, 'Peak fluence at the stage: 2 × Pulse Energy ÷ (π × spot radius²). Falls off fast as the spot grows with defocus.'],
+  ];
+  document.getElementById('summary-table').innerHTML = rows.map(r=>`<tr><td class="k" title="${r[2]}">${r[0]}</td><td class="v">${r[1]}</td></tr>`).join('');
+}
+function renderStageInfoTable(){
+  const zr_mm=zR_m()*1000, dof_mm=2*zr_mm, w0_um=w0_m()*1e6;
+  const rows=[
+    ['Focal length f', FOCAL_LENGTH_MM+' mm', 'Fixed F-theta lens focal length from the paper calibration (constant, not adjustable).'],
+    ['Rayleigh range z<sub>R</sub>', zr_mm.toFixed(2)+' mm', 'z_R = π·w0\'² / (λ·M²). Distance from focus over which the beam stays roughly collimated.'],
+    ['DOF (2·z<sub>R</sub>)', dof_mm.toFixed(2)+' mm', 'Depth of focus = 2 × z_R, the usable h_p range around focus for a near-minimum spot.'],
+    ['Exact Focus Distance', FOCAL_LENGTH_MM+' mm (h<sub>p</sub>=0)', 'Set Scanner–Stage Dist. to this value (or click the &quot;Find Focus&quot; button) to put the stage exactly at F.'],
+    ['Focus ⌀ (2w₀)', (w0_um*2).toFixed(1)+' μm', 'Smallest possible spot diameter, achieved only when h_p = 0. Driven by the "Measured Focus ⌀" you entered in Laser Source.'],
+    ['Theoretical Focus ⌀ (diffraction)', theoreticalFocusDia_um().toFixed(1)+' μm', 'Cross-check only, from Edmund Optics beam expander theory: 4λM²f/(π·D_raw·M_BET). Diffraction term only — real spot can be larger due to spherical aberration (grows with beam³) which isn\'t modeled here. Compare to "Focus ⌀" above; large mismatches suggest re-measuring Raw Beam ⌀ or Measured Focus ⌀.'],
+    ['Focus Fluence', fluence_mJcm2(0).toFixed(1)+' mJ/cm²', 'Peak fluence if the stage were placed exactly at focus (h_p=0), using current power/loss settings.'],
+    ['Output Polarization', outputPolarizationLabel(), 'HWP: 2×fast-axis angle, plus a path rotation from mirrors/scanner (manual-measured ~11°, editable in Component Values). Re-measure this rotation whenever the laser or optics change.'],
+  ];
+  document.getElementById('stageinfo-table').innerHTML = rows.map(r=>`<tr><td class="k" title="${r[2]}">${r[0]}</td><td class="v">${r[1]}</td></tr>`).join('');
+}
+function updateOutputs(){
+  document.getElementById('w0-derived').textContent=`w₀' = ${fmt(w0_m()*1e6,1)} μm (after λ scaling & BET)`;
+
+  const tv=parseFloat(document.getElementById('target-f').value);
+  const tTable=document.getElementById('target-f-table'), tStatus=document.getElementById('target-f-status');
+  if(!isNaN(tv) && tv>0){
+    const req=requiredZ_mm(tv);
+    if(req===null){
+      tTable.style.display='none';
+      tStatus.className='target-status bad';
+      tStatus.textContent=`Not reachable — max at focus is ${fmt(fluence_mJcm2(0),1)} mJ/cm².`;
+    } else {
+      tTable.style.display=''; tStatus.className='target-status'; tStatus.textContent='';
+      tTable.querySelector('tbody').innerHTML=`
+        <tr><td class="k">Distance (near F)</td><td class="v">${fmt(FOCAL_LENGTH_MM-req,1)} mm</td></tr>
+        <tr><td class="k">Distance (far F)</td><td class="v">${fmt(FOCAL_LENGTH_MM+req,1)} mm</td></tr>
+        <tr><td class="k">h<sub>p</sub></td><td class="v">±${fmt(req,2)} mm</td></tr>`;
+    }
+  } else {
+    tTable.style.display='none';
+    tStatus.className='target-status'; tStatus.textContent='Enter a value above.';
+  }
+
+  const tsv=parseFloat(document.getElementById('target-spot').value);
+  const sTable=document.getElementById('target-spot-table'), sStatus=document.getElementById('target-spot-status');
+  if(!isNaN(tsv) && tsv>0){
+    const req=requiredZ_from_spot_um(tsv);
+    if(req===null){
+      sTable.style.display='none';
+      sStatus.className='target-status bad';
+      sStatus.textContent=`Not reachable — min spot at focus is ${fmt(w0_m()*1e6*2,1)} μm.`;
+    } else {
+      sTable.style.display=''; sStatus.className='target-status'; sStatus.textContent='';
+      sTable.querySelector('tbody').innerHTML=`
+        <tr><td class="k">Distance (near F)</td><td class="v">${fmt(FOCAL_LENGTH_MM-req,1)} mm</td></tr>
+        <tr><td class="k">Distance (far F)</td><td class="v">${fmt(FOCAL_LENGTH_MM+req,1)} mm</td></tr>
+        <tr><td class="k">h<sub>p</sub></td><td class="v">±${fmt(req,2)} mm</td></tr>`;
+    }
+  } else {
+    sTable.style.display='none';
+    sStatus.className='target-status'; sStatus.textContent='Enter a value above.';
+  }
+  renderLoss();
+}
+function render(){ buildScene(); updateOutputs(); renderProfile(); renderSummaryTable(); renderStageInfoTable(); }
+
+document.getElementById('wavelength').addEventListener('change', e=>{ state.wavelength=parseInt(e.target.value); state.profileZoomUm=null; });
+document.getElementById('pavg').addEventListener('input', e=>{ state.pavg=parseFloat(e.target.value)||0; });
+document.getElementById('reprate').addEventListener('input', e=>{ state.reprate=parseFloat(e.target.value)||1; });
+document.getElementById('pulsewidth').addEventListener('input', e=>{ state.pulsewidth=parseFloat(e.target.value)||1; });
+document.getElementById('msq').addEventListener('input', e=>{ state.mSquared=parseFloat(e.target.value)||1.2; });
+document.getElementById('focusDiaInput').addEventListener('input', e=>{
+  const v=parseFloat(e.target.value);
+  state.w0CalUm = (isNaN(v)||v<=0) ? state.w0CalUm : v/2;
+  state.profileZoomUm=null;
+});
+document.getElementById('rawBeamDia').addEventListener('input', e=>{ state.rawBeamDiaMm=parseFloat(e.target.value)||8; });
+document.getElementById('divergence').addEventListener('input', e=>{ state.divergenceMrad=parseFloat(e.target.value)||2; });
+document.getElementById('attT').addEventListener('input', e=>{ state.attT=parseFloat(e.target.value)||0; });
+document.getElementById('mirrorR').addEventListener('input', e=>{ state.mirrorR=parseFloat(e.target.value)||99; });
+document.getElementById('betM').addEventListener('input', e=>{ state.betM=parseFloat(e.target.value)||1; state.profileZoomUm=null; });
+document.getElementById('betT').addEventListener('input', e=>{ state.betT=parseFloat(e.target.value)||98; });
+document.getElementById('wpType').addEventListener('change', e=>{ state.wpType=e.target.value; });
+document.getElementById('wpAngle').addEventListener('input', e=>{ state.wpAngle=parseFloat(e.target.value)||0; });
+document.getElementById('wpT').addEventListener('input', e=>{ state.wpT=parseFloat(e.target.value)||99; });
+document.getElementById('pathPolRotation').addEventListener('input', e=>{ state.pathPolRotation=parseFloat(e.target.value); if(isNaN(state.pathPolRotation)) state.pathPolRotation=0; });
+document.querySelectorAll('.process-btn-icon').forEach(b=> b.addEventListener('click', render));
+
+bindDual('z-slider','z-num', {min:150,max:450,sliderStep:10,numStep:1, get:()=>state.scanStageDist, set:v=>state.scanStageDist=v});
+document.getElementById('reset-default').addEventListener('click', resetDistanceDefaults);
+document.getElementById('find-focus-btn').addEventListener('click', ()=>{
+  state.scanStageDist=FOCAL_LENGTH_MM;
+  document.getElementById('z-slider').value=FOCAL_LENGTH_MM;
+  document.getElementById('z-num').value=FOCAL_LENGTH_MM;
+  render();
+});
+document.getElementById('target-f').addEventListener('input', updateOutputs);
+document.getElementById('target-spot').addEventListener('input', updateOutputs);
+
+document.getElementById('zoom-in').addEventListener('click', ()=>{ state.profileZoomUm=Math.max(5, state.profileZoomUm/1.3); renderProfile(); });
+document.getElementById('zoom-out').addEventListener('click', ()=>{ state.profileZoomUm=Math.min(2000, state.profileZoomUm*1.3); renderProfile(); });
+document.getElementById('zoom-reset').addEventListener('click', ()=>{ state.profileZoomUm=autoFitZoom(); renderProfile(); });
+document.getElementById('colormap').addEventListener('change', e=>{ state.profileColormap=e.target.value; render(); });
+document.getElementById('profile-3d-toggle').addEventListener('click', function(){ this.classList.toggle('on'); state.profile3D=this.classList.contains('on'); renderProfile(); });
+document.getElementById('guide-toggle').addEventListener('click', function(){ this.classList.toggle('on'); state.profileGuide=this.classList.contains('on'); renderProfile(); });
+document.getElementById('normalize-toggle').addEventListener('click', function(){ this.classList.toggle('on'); state.profileNormalize=this.classList.contains('on'); renderProfile(); });
+document.getElementById('dl-beam').addEventListener('click', ()=> downloadProfileRegion('beam_profile','beam_profile'));
+document.getElementById('dl-x').addEventListener('click', ()=> downloadProfileRegion('x_profile','x_profile'));
+document.getElementById('dl-y').addEventListener('click', ()=> downloadProfileRegion('y_profile','y_profile'));
+
+document.getElementById('play-pause-btn').addEventListener('click', function(){
+  animPlaying=!animPlaying;
+  this.textContent = animPlaying? '⏸' : '▶';
+});
+
+buildDistanceControls();
+bindStepButtons();
+renderComponentList();
+updateComponentValueStates();
+render();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
